@@ -7,6 +7,11 @@
   "main": "dist/main/main/main.js",
   "scripts": {
     "gen:registry": "node scripts/gen_registry.js",
+    "kb": "tsx src/kb/cli.ts",
+    "kb:check": "tsx src/kb/cli.ts check",
+    "kb:write": "tsx src/kb/cli.ts write",
+    "kb:search": "tsx src/kb/cli.ts search",
+    "design": "tsx src/design/cli.ts",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json && node scripts/copy-assets.js",
     "build": "npm run build:renderer && npm run build:main",
