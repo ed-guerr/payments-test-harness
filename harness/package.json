@@ -1,0 +1,26 @@
+{
+  "name": "payments-test-harness",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Realtime JSON test harness for the payments backend — Electron GUI + headless CLI + MCP server",
+  "type": "commonjs",
+  "main": "dist/main.js",
+  "scripts": {
+    "gen:registry": "node scripts/gen_registry.js",
+    "run:cli": "tsx src/runner/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "esbuild@0.28.2": true
+  }
+}

@@ -1,0 +1,365 @@
+{
+  "generatedAt": "2026-10-12T21:54:08.067Z",
+  "procs": {
+    "pay-orders": {
+      "process": "pay-orders",
+      "listen": "127.0.0.1:9101",
+      "messages": [
+        {
+          "id": 10,
+          "name": "CreatePayment",
+          "direction": "in",
+          "size": 27,
+          "response": 20,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "account",
+              "type": "char[16]",
+              "size": 16,
+              "offset": 4
+            },
+            {
+              "name": "amount_cents",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 20
+            },
+            {
+              "name": "currency",
+              "type": "char[3]",
+              "size": 3,
+              "offset": 24
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "name": "CancelPayment",
+          "direction": "in",
+          "size": 20,
+          "response": 20,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "reason",
+              "type": "char[16]",
+              "size": 16,
+              "offset": 4
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "name": "CompletePayment",
+          "direction": "in",
+          "size": 4,
+          "response": 20,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "name": "PaymentAck",
+          "direction": "out",
+          "size": 5,
+          "response": 0,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "status",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 4
+            }
+          ]
+        },
+        {
+          "id": 255,
+          "name": "ErrorAck",
+          "direction": "out",
+          "size": 27,
+          "response": 0,
+          "fields": [
+            {
+              "name": "msg_id",
+              "type": "uint16_t",
+              "size": 2,
+              "offset": 0
+            },
+            {
+              "name": "code",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 2
+            },
+            {
+              "name": "detail",
+              "type": "char[24]",
+              "size": 24,
+              "offset": 3
+            }
+          ]
+        }
+      ]
+    },
+    "ledger": {
+      "process": "ledger",
+      "listen": "127.0.0.1:9102",
+      "messages": [
+        {
+          "id": 30,
+          "name": "TransferFunds",
+          "direction": "in",
+          "size": 40,
+          "response": 32,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "from_acct",
+              "type": "char[16]",
+              "size": 16,
+              "offset": 4
+            },
+            {
+              "name": "to_acct",
+              "type": "char[16]",
+              "size": 16,
+              "offset": 20
+            },
+            {
+              "name": "amount_cents",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 36
+            }
+          ]
+        },
+        {
+          "id": 31,
+          "name": "ReverseTransfer",
+          "direction": "in",
+          "size": 4,
+          "response": 32,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "id": 32,
+          "name": "TransferAck",
+          "direction": "out",
+          "size": 9,
+          "response": 0,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "status",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 4
+            },
+            {
+              "name": "from_balance_after",
+              "type": "int32_t",
+              "size": 4,
+              "offset": 5
+            }
+          ]
+        },
+        {
+          "id": 255,
+          "name": "ErrorAck",
+          "direction": "out",
+          "size": 27,
+          "response": 0,
+          "fields": [
+            {
+              "name": "msg_id",
+              "type": "uint16_t",
+              "size": 2,
+              "offset": 0
+            },
+            {
+              "name": "code",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 2
+            },
+            {
+              "name": "detail",
+              "type": "char[24]",
+              "size": 24,
+              "offset": 3
+            }
+          ]
+        }
+      ]
+    },
+    "auth-gateway": {
+      "process": "auth-gateway",
+      "listen": "127.0.0.1:9103",
+      "messages": [
+        {
+          "id": 40,
+          "name": "Authorize",
+          "direction": "in",
+          "size": 8,
+          "response": 42,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "amount_cents",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 4
+            }
+          ]
+        },
+        {
+          "id": 41,
+          "name": "Settle",
+          "direction": "in",
+          "size": 6,
+          "response": 43,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "fee_cents",
+              "type": "uint16_t",
+              "size": 2,
+              "offset": 4
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "name": "AuthResponse",
+          "direction": "out",
+          "size": 21,
+          "response": 0,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "approved",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 4
+            },
+            {
+              "name": "auth_code",
+              "type": "char[16]",
+              "size": 16,
+              "offset": 5
+            }
+          ]
+        },
+        {
+          "id": 43,
+          "name": "SettleAck",
+          "direction": "out",
+          "size": 9,
+          "response": 0,
+          "fields": [
+            {
+              "name": "txn_id",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 0
+            },
+            {
+              "name": "status",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 4
+            },
+            {
+              "name": "settled_cents",
+              "type": "uint32_t",
+              "size": 4,
+              "offset": 5
+            }
+          ]
+        },
+        {
+          "id": 255,
+          "name": "ErrorAck",
+          "direction": "out",
+          "size": 27,
+          "response": 0,
+          "fields": [
+            {
+              "name": "msg_id",
+              "type": "uint16_t",
+              "size": 2,
+              "offset": 0
+            },
+            {
+              "name": "code",
+              "type": "uint8_t",
+              "size": 1,
+              "offset": 2
+            },
+            {
+              "name": "detail",
+              "type": "char[24]",
+              "size": 24,
+              "offset": 3
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
