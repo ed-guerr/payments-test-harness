@@ -1,0 +1,78 @@
+#define _POSIX_C_SOURCE 200809L
+
+#include <stdio.h>
+#include <string.h>
+
+#include "handlers.h"
+#include "pay/ack.h"
+#include "pay/args.h"
+#include "pay/db.h"
+#include "pay/introspect.h"
+#include "pay/log.h"
+#include "pay/messages.h"
+#include "pay/msg_ids.h"
+#include "pay/socket.h"
+
+static const MessageDef LEDGER_MSGS[] = {
+    {MSG_TRANSFER_FUNDS, "TransferFunds", "in", sizeof(TransferFundsMsg), TransferFundsMsg_fields,
+     MSG_TRANSFER_ACK, handle_transfer_funds},
+    {MSG_REVERSE_TRANSFER, "ReverseTransfer", "in", sizeof(ReverseTransferMsg),
+     ReverseTransferMsg_fields, MSG_TRANSFER_ACK, handle_reverse_transfer},
+    {MSG_TRANSFER_ACK, "TransferAck", "out", sizeof(TransferAckMsg), TransferAckMsg_fields, 0,
+     NULL},
+    {MSG_ERROR_ACK, "ErrorAck", "out", sizeof(ErrorAckMsg), ErrorAckMsg_fields, 0, NULL},
+};
+
+static int dispatch(Server *srv, int client, const Envelope *env)
+{
+    for (size_t i = 0; i < PF_ARRAY_LEN(LEDGER_MSGS); i++)
+    {
+        const MessageDef *def = &LEDGER_MSGS[i];
+
+        if (def->id != env->msg_id || strcmp(def->direction, "in") != 0)
+            continue;
+
+        if (env->payload_len != def->struct_size)
+        {
+            log_msg("msg %s rejected: expected %zu bytes, got %u", def->name, def->struct_size,
+                    env->payload_len);
+            server_send_error(srv, client, env->msg_id, ERR_SIZE_MISMATCH, "payload size mismatch");
+            return 0;
+        }
+
+        if (def->handler(srv, client, env) != 0)
+            server_send_error(srv, client, env->msg_id, ERR_HANDLER, "handler error");
+        return 0;
+    }
+
+    log_msg("unknown message id=%u", env->msg_id);
+    server_send_error(srv, client, env->msg_id, ERR_UNKNOWN_MSG, "unknown message id");
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    Args args;
+    if (args_parse(argc, argv, 9102, &args) != 0)
+        return 2;
+
+    if (args.introspect)
+    {
+        introspect_print("ledger", args.port, LEDGER_MSGS, PF_ARRAY_LEN(LEDGER_MSGS));
+        return 0;
+    }
+
+    log_init("ledger");
+
+    if (db_open(args.db_path) != 0)
+        return 3;
+
+    Server srv;
+    if (server_bind(&srv, args.port) != 0)
+        return 1;
+
+    log_msg("listening on 127.0.0.1:%u db=%s", args.port, args.db_path);
+    server_run(&srv, dispatch, "ledger");
+    db_close();
+    return 0;
+}
