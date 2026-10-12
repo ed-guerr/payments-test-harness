@@ -1,0 +1,44 @@
+{
+  "name": "payment-happy-path",
+  "description": "Full lifecycle: create -> transfer -> authorize (forwards CompletePayment) -> settle (forwards TransferFunds to RESERVE) -> verify database state",
+  "steps": [
+    {
+      "id": "create",
+      "send": { "to": "pay-orders", "msg": "CreatePayment", "fields": { "txn_id": 1001, "account": "ACCT-001", "amount_cents": 50000, "currency": "USD" } },
+      "expectAck": { "status": 0 }
+    },
+    {
+      "id": "transfer",
+      "send": { "to": "ledger", "msg": "TransferFunds", "fields": { "txn_id": 1001, "from_acct": "ACCT-001", "to_acct": "ACCT-002", "amount_cents": 50000 } },
+      "expectAck": { "status": 0, "from_balance_after": 450000 }
+    },
+    {
+      "id": "authorize",
+      "send": { "to": "auth-gateway", "msg": "Authorize", "fields": { "txn_id": 1001, "amount_cents": 50000 } },
+      "expectAck": { "approved": 1, "auth_code": "AU-0001001" }
+    },
+    { "id": "wait-complete-forward", "delayMs": 300 },
+    {
+      "id": "assert-complete",
+      "dbAssert": { "sql": "SELECT status FROM payments WHERE txn_id = ?", "params": [1001], "expect": { "status": "complete" } }
+    },
+    {
+      "id": "settle",
+      "send": { "to": "auth-gateway", "msg": "Settle", "fields": { "txn_id": 1001, "fee_cents": 2500 } },
+      "expectAck": { "status": 0, "settled_cents": 50000 }
+    },
+    { "id": "wait-settle-forward", "delayMs": 300 },
+    {
+      "id": "assert-settled",
+      "dbAssert": { "sql": "SELECT status FROM payments WHERE txn_id = ?", "params": [1001], "expect": { "status": "settled" } }
+    },
+    {
+      "id": "assert-balance-payer",
+      "dbAssert": { "sql": "SELECT balance_cents FROM accounts WHERE acct = ?", "params": ["ACCT-001"], "expect": { "balance_cents": 400000 } }
+    },
+    {
+      "id": "assert-balance-reserve",
+      "dbAssert": { "sql": "SELECT balance_cents FROM accounts WHERE acct = ?", "params": ["RESERVE"], "expect": { "balance_cents": 1050000 } }
+    }
+  ]
+}

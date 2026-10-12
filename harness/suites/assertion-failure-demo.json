@@ -1,0 +1,24 @@
+{
+  "name": "assertion-failure-demo",
+  "description": "Deliberately contains one failing dbAssert (expects 'settled' on a freshly created payment) to show the harness's failure reporting. This suite is EXPECTED to fail.",
+  "steps": [
+    {
+      "id": "create",
+      "send": { "to": "pay-orders", "msg": "CreatePayment", "fields": { "txn_id": 1004, "account": "ACCT-002", "amount_cents": 2000, "currency": "USD" } },
+      "expectAck": { "status": 0 }
+    },
+    {
+      "id": "intentionally-wrong",
+      "dbAssert": { "sql": "SELECT status FROM payments WHERE txn_id = ?", "params": [1004], "expect": { "status": "settled" } }
+    },
+    {
+      "id": "cancel",
+      "send": { "to": "pay-orders", "msg": "CancelPayment", "fields": { "txn_id": 1004, "reason": "test" } },
+      "expectAck": { "status": 0 }
+    },
+    {
+      "id": "assert-cancelled",
+      "dbAssert": { "sql": "SELECT status FROM payments WHERE txn_id = ?", "params": [1004], "expect": { "status": "cancelled" } }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "insufficient-funds",
+  "description": "A payment larger than the account balance: the ledger refuses, nothing moves, the payment stays open",
+  "steps": [
+    {
+      "id": "create",
+      "send": { "to": "pay-orders", "msg": "CreatePayment", "fields": { "txn_id": 1002, "account": "ACCT-002", "amount_cents": 300000000, "currency": "USD" } },
+      "expectAck": { "status": 0 }
+    },
+    {
+      "id": "transfer-refused",
+      "send": { "to": "ledger", "msg": "TransferFunds", "fields": { "txn_id": 1002, "from_acct": "ACCT-002", "to_acct": "ACCT-001", "amount_cents": 300000000 } },
+      "expectAck": { "status": 1 }
+    },
+    {
+      "id": "assert-still-open",
+      "dbAssert": { "sql": "SELECT status FROM payments WHERE txn_id = ?", "params": [1002], "expect": { "status": "open" } }
+    },
+    {
+      "id": "assert-balance-unchanged",
+      "dbAssert": { "sql": "SELECT balance_cents FROM accounts WHERE acct = ?", "params": ["ACCT-002"], "expect": { "balance_cents": 250000 } }
+    }
+  ]
+}
