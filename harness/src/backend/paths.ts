@@ -24,6 +24,8 @@ export function packageRoot(): string {
 
 export const SUITES_DIR = (): string => path.join(packageRoot(), "suites");
 export const DATA_DIR = (): string => path.join(packageRoot(), "data");
+/** Persisted run results (one JSON file per suite run). */
+export const RUNS_DIR = (): string => path.join(packageRoot(), "runs");
 /** Backend build output: <repo>/backend/build (sibling of harness/). */
 export const backendBuildDir = (): string => path.join(packageRoot(), "..", "backend", "build");
 /** The backend's SQL schema + seed file. */

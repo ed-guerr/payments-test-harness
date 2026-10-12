@@ -12,6 +12,8 @@
  * The runner is Electron-free: it emits JSON events through a callback, so
  * the CLI prints them and the Electron UI subscribes to the same events.
  */
+import fs from "node:fs";
+import path from "node:path";
 import { checkRow, Db } from "../db/db";
 import * as codec from "../protocol/codec";
 import type { Conn } from "../protocol/conn";
@@ -66,20 +68,28 @@ export type RunnerEvent =
 
 export const DEFAULT_TIMEOUT_MS = 2000;
 
+export interface RunnerOptions {
+  /** When set, each finished run is persisted to <runsDir>/<suite>-<ts>.json. */
+  runsDir?: string;
+}
+
 export class Runner {
   constructor(
     private conns: Record<string, Conn>,
     private db: Db,
     private emit: (e: RunnerEvent) => void,
+    private opts: RunnerOptions = {},
   ) {}
 
   async runSuite(suite: Suite): Promise<SuiteResult> {
     const t0 = Date.now();
     this.emit({ type: "suite-start", suite: suite.name });
+    const steps: StepResult[] = [];
     let passed = 0;
     let failed = 0;
     for (const step of suite.steps) {
       const r = await this.runStep(suite.name, step);
+      steps.push(r);
       this.emit({ type: "step-result", ...r });
       if (r.ok) passed++;
       else failed++;
@@ -92,7 +102,31 @@ export class Runner {
       durationMs: Date.now() - t0,
     };
     this.emit({ type: "suite-result", ...result });
+    this.persistRun(result, steps);
     return result;
+  }
+
+  private persistRun(result: SuiteResult, steps: StepResult[]): void {
+    if (!this.opts.runsDir) return;
+    try {
+      fs.mkdirSync(this.opts.runsDir, { recursive: true });
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      const file = path.join(this.opts.runsDir, `${result.suite}-${ts}.json`);
+      fs.writeFileSync(file, JSON.stringify({ at: new Date().toISOString(), ...result, steps }, null, 2) + "\n");
+    } catch {
+      // persisting is best-effort; never fail a run because of it
+    }
+  }
+
+  /** Latest persisted run for a suite (or the latest overall when name is null). */
+  static latestRun(runsDir: string, suite?: string): { file: string; data: unknown } | null {
+    const files = fs
+      .readdirSync(runsDir)
+      .filter((f) => f.endsWith(".json") && (!suite || f.startsWith(`${suite}-`)))
+      .sort();
+    const last = files[files.length - 1];
+    if (!last) return null;
+    return { file: path.join(runsDir, last), data: JSON.parse(fs.readFileSync(path.join(runsDir, last), "utf8")) };
   }
 
   async runSuites(suites: Suite[]): Promise<SuiteResult[]> {

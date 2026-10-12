@@ -8,7 +8,7 @@
  */
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
-import { backendBuildDir, DATA_DIR, SUITES_DIR } from "../backend/paths";
+import { backendBuildDir, DATA_DIR, RUNS_DIR, SUITES_DIR } from "../backend/paths";
 import { listSuites, loadSuite } from "../backend/suites";
 import { Runner } from "./runner";
 import type { RunnerEvent, Suite, SuiteResult } from "./runner";
@@ -62,7 +62,7 @@ async function main(): Promise<number> {
     const cluster = await BackendCluster.start(opts.binDir, path.join(DATA_DIR(), `${suite.name}.db`), (p, line) =>
       process.stderr.write(`[${p}] ${line}\n`),
     );
-    const runner = new Runner(cluster.conns, cluster.db, (e) => printEvent(e, opts.json));
+    const runner = new Runner(cluster.conns, cluster.db, (e) => printEvent(e, opts.json), { runsDir: RUNS_DIR() });
     try {
       results.push(await runner.runSuite(suite));
     } finally {

@@ -10,7 +10,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
-import { backendBuildDir, DATA_DIR, SUITES_DIR } from "../backend/paths";
+import { backendBuildDir, DATA_DIR, RUNS_DIR, SUITES_DIR } from "../backend/paths";
 import { listSuites, loadSuite } from "../backend/suites";
 import { Db, DbRow } from "../db/db";
 import { Runner } from "../runner/runner";
@@ -54,7 +54,7 @@ function registerIpc(): void {
     const cluster = await BackendCluster.start(backendBuildDir(), path.join(DATA_DIR(), `${name}.db`), (proc, line) =>
       sendUi({ type: "backend-log", proc, line }),
     );
-    const runner = new Runner(cluster.conns, cluster.db, (e) => sendUi(e));
+    const runner = new Runner(cluster.conns, cluster.db, (e) => sendUi(e), { runsDir: RUNS_DIR() });
     try {
       return await runner.runSuite(suite);
     } finally {
