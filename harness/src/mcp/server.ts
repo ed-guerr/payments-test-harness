@@ -24,6 +24,7 @@ import {
 } from "../backend/paths";
 import { listSuites, loadSuite, validateSuite } from "../backend/suites";
 import { Db } from "../db/db";
+import { kbEnabled, kbHintsFor, messageKbNotes, registerKbTools } from "./kbTools";
 import { Runner } from "../runner/runner";
 import type { Suite } from "../runner/runner";
 import * as codec from "../protocol/codec";
@@ -86,7 +87,12 @@ server.registerTool(
       message: z.string().describe("Message name, e.g. CreatePayment"),
     },
   },
-  ({ process: proc, message }) => text(codec.findMessage(proc, message)),
+  ({ process: proc, message }) => {
+    const m = codec.findMessage(proc, message);
+    const notes = messageKbNotes(proc, message);
+    if (notes) m.notes = notes; // KB row: precondition + side effect (absent when MCP_NO_KB=1)
+    return text(m);
+  },
 );
 
 /* ------------------------------------------------------------------ */
@@ -120,7 +126,16 @@ server.registerTool(
   },
   ({ name, description, steps }) => {
     const suite: Suite = { name, description, steps: steps as unknown as Suite["steps"] };
-    validateSuite(suite);
+    try {
+      validateSuite(suite);
+    } catch (e) {
+      // Give the agent a recovery path: KB hints for the offending message/field.
+      const msg = e instanceof Error ? e.message : String(e);
+      const first = (msg.split(",")[0] ?? msg).replace(/"/g, "").trim();
+      const hints = kbHintsFor(first);
+      const hintText = hints.length > 0 ? ` kbHints: ${hints.join("; ")}` : "";
+      throw new Error(`${msg}${hintText}`);
+    }
     const file = suiteFile(name);
     fs.writeFileSync(file, JSON.stringify(suite, null, 2) + "\n");
     return text({ created: file, steps: suite.steps.length });
@@ -244,7 +259,12 @@ server.registerTool(
   },
 );
 
-/* kb_search / kb_read are registered in mcp/kbTools.ts (knowledge base, P5). */
+/* Knowledge base tools (disabled with MCP_NO_KB=1 for the A/B demo). */
+if (kbEnabled()) {
+  registerKbTools(server);
+} else {
+  console.error("MCP_NO_KB=1 — knowledge base tools disabled");
+}
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();

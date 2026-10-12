@@ -303,13 +303,17 @@ failure.
 |---|---|
 | Any C code | `make` (zero warnings, `-Werror`) · `make check` (ASan+UBSan + smoke test) · `make fmt-check` |
 | Makefile / build | `make` + `make check` |
-| Harness TS | `npm run check` (`tsc --noEmit` + `prettier --check`) |
-| Runner or suite format | `npm run run:cli -- payment-happy-path --reset` green |
-| Protocol / registry | `npm run introspect` output diff is intended · `docs/protocol.md` updated (same commit) |
+| Harness TS | `npm run typecheck` clean |
+| Runner or suite format | `npm run run:cli -- suites/payment-happy-path.json` green |
+| Protocol / messages | `npm run gen:registry` → `harness/src/protocol/registry.json` diff is intended (same commit) · `npm run kb` (guides embed message tables) · `npm run kb:check` |
+| KB sources (meta.ts) or guides | `npm run kb` + `npm run kb:check` |
+| MCP server | `npm run test:mcp` (and `MCP_NO_KB=1 npm run test:mcp` for the A/B path) |
+| Electron main / preload | `HARNESS_SELF_TEST=1 npm start` exits 0 |
 | Every commit | Conventional format with scope (§1.1) · subject ≤ 72 chars |
 
 `make check` is the leak/UB gate for C; `npm run run:cli …` is the
-behavioral gate for the harness. Neither is optional.
+behavioral gate for the harness; `npm run kb:check` is the staleness gate
+for the knowledge base. None is optional.
 
 ---
 
@@ -332,13 +336,16 @@ commitlint land with the harness scaffold (P2.1).
 
 ## 6. Documentation sync
 
-- **Protocol change** (new message, field, ack code) →
-  `docs/protocol.md` updated **in the same commit**. The registry
-  (`--introspect`) regenerates automatically; the catalog doc must not lag it.
-- **Behavior change** (side effects, preconditions, forwards) → the commit
-  body says `kb: regenerate guides` and, if a key is available,
-  `npm run kb` runs in the same change. Stale KB is a bug: `npm run kb:check`
-  must pass on `main`.
+- **Protocol change** (new message, field, ack code) → regenerate the
+  registry **in the same commit**: `npm run gen:registry` rewrites
+  `harness/src/protocol/registry.json` from the binaries' `--introspect`.
+  The plan's message catalog tables are documentation; the registry is
+  ground truth.
+- **Behavior change** (side effects, preconditions, forwards) → update the
+  curated facts in `harness/src/kb/meta.ts` and run `npm run kb` in the same
+  change. Stale KB is a bug: `npm run kb:check` must pass on `main`.
+  (`npm run kb` is deterministic without an API key; `--llm` with
+  KB_API_KEY rewrites the prose.)
 - **README quickstart** — every command must be verbatim-runnable from a
   fresh clone (verified in the final docs phase).
 - Docs live in `docs/`; the README links to them instead of duplicating.

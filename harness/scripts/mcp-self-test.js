@@ -13,6 +13,7 @@ const path = require("node:path");
 const root = path.join(__dirname, "..");
 const server = spawn(process.execPath, [require("node:path").join(root, "node_modules", "tsx", "dist", "cli.mjs"), path.join(root, "src", "mcp", "server.ts")], {
   cwd: root,
+  env: { ...process.env, MCP_NO_KB: process.env.MCP_NO_KB ?? "" },
   stdio: ["pipe", "pipe", "inherit"],
 });
 
@@ -68,7 +69,9 @@ async function callTool(name, args) {
   const list = await rpc("tools/list", {});
   const tools = list.result.tools.map((t) => t.name);
   console.log(`tools (${tools.length}): ${tools.join(", ")}`);
+  const noKb = process.env.MCP_NO_KB === "1";
   const expected = ["list_processes", "list_messages", "get_message_schema", "list_suites", "get_suite", "create_suite", "update_suite", "delete_suite", "run_suite", "run_all_suites", "get_run_results", "db_schema", "db_query"];
+  if (!noKb) expected.push("kb_search", "kb_read");
   for (const t of expected) {
     if (!tools.includes(t)) throw new Error(`missing tool ${t}`);
   }
@@ -99,6 +102,25 @@ async function callTool(name, args) {
 
   await callTool("delete_suite", { name: "mcp-selftest-suite" });
   console.log("delete_suite ok");
+
+  if (!noKb) {
+    const hits = await callTool("kb_search", { query: "authorization completes payment downstream", limit: 3 });
+    if (!Array.isArray(hits) || hits.length === 0 || !hits[0]?.path?.startsWith("knowledge/")) {
+      throw new Error("kb_search failed: " + JSON.stringify(hits));
+    }
+    console.log(`kb_search ok: top hit ${hits[0].path} :: ${hits[0].section} (score ${hits[0].score})`);
+
+    const guide = await callTool("kb_read", { path: hits[0].path, section: "Messages" });
+    if (typeof guide !== "string" || !guide.includes("Messages")) throw new Error("kb_read failed");
+    console.log("kb_read ok");
+
+    // get_message_schema should carry KB notes
+    const withNotes = await callTool("get_message_schema", { process: "auth-gateway", message: "Authorize" });
+    if (typeof withNotes.notes !== "string") throw new Error("get_message_schema missing KB notes");
+    console.log("get_message_schema KB notes ok");
+  } else {
+    console.log("MCP_NO_KB=1: kb tools correctly absent");
+  }
 
   console.log("\nMCP SELF-TEST PASSED");
   server.kill();

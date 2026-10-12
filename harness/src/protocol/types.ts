@@ -23,6 +23,8 @@ export interface MessageDef {
   /** id of the ack/response message, or 0 when none */
   response: number;
   fields: FieldDef[];
+  /** Optional knowledge-base note (precondition + side effect), attached by the MCP server. */
+  notes?: string;
 }
 
 export interface ProcDef {

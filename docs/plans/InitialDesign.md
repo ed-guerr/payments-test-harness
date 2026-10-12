@@ -927,19 +927,25 @@ Stdio server (`@modelcontextprotocol/sdk`), started from the app menu or
 
 | Tool | Args | Returns |
 |---|---|---|
-| `list_processes` | — | per process: name, listen, running, message names + directions |
-| `list_messages` | `process?` | full registry schemas (one or all processes) |
-| `get_message_schema` | `process, name` | fields (name/type/size/offset) + response id |
-| `list_suites` | — | `[{id, name, stepCount, lastRun}]` |
-| `create_suite` | `suite: object` | `{id, path}` — zod + registry validation; errors are descriptive ("message 'Foo' has no field 'bar'") |
-| `update_suite` | `id, suite` | same |
-| `delete_suite` | `id` | `{deleted: true}` |
-| `run_suite` | `id` | full `RunResult` (auto-starts backend if stopped) |
-| `list_runs` / `get_run` | `runId?` | history / one result |
-| `get_backend_logs` | `lines? = 200` | ring-buffer tail with process + timestamp |
-| `reset_database` | — | `{ok: true}` (destructive; documented) |
-| `kb_search` | `query, limit? = 5` | scored KB sections (§6.4) — added in P5 |
-| `kb_read` | `path, section?` | full guide or one section — added in P5 |
+| `list_processes` | — | per process: listen address, message count |
+| `list_messages` | `process` | ids, names, directions, sizes |
+| `get_message_schema` | `process, message` | fields (name/type/size/offset) + KB `notes` row when KB enabled |
+| `list_suites` | — | `[{name, description, steps}]` |
+| `get_suite` | `name` | full suite JSON |
+| `create_suite` | `name, description?, steps[]` | `{created, steps}` — registry validation; failures include `kbHints` for the offending message/field |
+| `update_suite` | `name, description?, steps[]` | `{updated, steps}` |
+| `delete_suite` | `name` | `{deleted}` (the four shipped sample suites are protected) |
+| `run_suite` | `name` | full step results (fresh backend cluster per run) |
+| `run_all_suites` | — | results for every suite |
+| `get_run_results` | `name?` | latest persisted run (harness/runs/*.json) |
+| `db_schema` | — | the backend's schema.sql |
+| `db_query` | `file, sql` | read-only SELECT over a per-suite database |
+| `kb_search` | `query, limit? = 5` | scored KB sections (§6.4) — absent when MCP_NO_KB=1 |
+| `kb_read` | `path, section?` | full guide or one section — absent when MCP_NO_KB=1 |
+
+Verified end-to-end by `npm run test:mcp` (stdio self-test: initialize → list
+→ create → run → db_query → kb_search → kb_read, plus the MCP_NO_KB=1
+A/B variant).
 
 The agent workflow this enables (the demo's money shot):
 
