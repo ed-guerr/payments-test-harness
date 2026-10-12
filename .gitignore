@@ -1,0 +1,13 @@
+# build output
+backend/build/
+backend/build-asan/
+
+# harness app
+harness/node_modules/
+harness/dist/
+harness/data/
+harness/runs/
+
+# logs & temp
+*.log
+.DS_Store
