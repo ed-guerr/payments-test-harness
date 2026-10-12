@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "commonjs",
+    "outDir": "dist/main",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/backend/**/*.ts",
+    "src/runner/**/*.ts",
+    "src/db/**/*.ts",
+    "src/protocol/**/*.ts"
+  ]
+}

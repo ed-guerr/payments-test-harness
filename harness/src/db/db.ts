@@ -1,35 +1,42 @@
 /**
  * db/db.ts — SQLite access for the harness.
  *
- * The harness talks to the same database file the backend processes use
- * (the runner initializes it from backend/db/schema.sql and starts the
- * binaries with --db pointing at it), so dbAssert steps read real backend
- * state. better-sqlite3 is synchronous and single-connection, which fits
- * the runner's request/response rhythm.
+ * Uses Node's built-in node:sqlite (DatabaseSync): no native module, so the
+ * same code runs identically under system Node (headless CLI) and Electron's
+ * Node (GUI) — no ABI rebuilds, no postinstall.
+ *
+ * The harness talks to the same database file the backend processes use (the
+ * runner initializes it from backend/db/schema.sql and starts the binaries
+ * with --db pointing at it), so dbAssert steps read real backend state.
  */
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
+import { schemaFile } from "../backend/paths";
 
 export interface DbRow {
-  [col: string]: string | number | null;
+  [col: string]: string | number | bigint | null;
 }
 
 export class Db {
-  private db: Database.Database;
+  private db: DatabaseSync;
 
-  private constructor(db: Database.Database, public readonly file: string) {
+  private constructor(db: DatabaseSync, public readonly file: string) {
     this.db = db;
   }
 
   /** Open (creating if needed) and initialize with the backend schema + seed data. */
   static open(file: string): Db {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    const db = new Database(file);
-    db.pragma("journal_mode = WAL");
-    const schemaFile = path.join(__dirname, "..", "..", "..", "backend", "db", "schema.sql");
-    db.exec(fs.readFileSync(schemaFile, "utf8"));
+    const db = new DatabaseSync(file);
+    db.exec("PRAGMA journal_mode = WAL;");
+    db.exec(fs.readFileSync(schemaFile(), "utf8"));
     return new Db(db, file);
+  }
+
+  /** Open an existing database read-only (no schema execution). */
+  static readOnly(file: string): Db {
+    return new Db(new DatabaseSync(file, { readOnly: true }), file);
   }
 
   run(sql: string, params: (string | number | null)[] = []): void {

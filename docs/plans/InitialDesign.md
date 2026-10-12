@@ -338,7 +338,7 @@ INSERT INTO accounts VALUES ('RESERVE',  'Reserve Fund', 1000000);
 Access rules:
 
 - C processes: read/write inside short transactions.
-- Harness `Validate` steps: **read-only** handle (`better-sqlite3` open
+- Harness `Validate` steps: **read-only** handle (`node:sqlite` opened
   readonly) + SQL guard (must match `^\s*(SELECT|WITH)\b`, single statement).
 
 ### 3.7 Logging
@@ -515,7 +515,7 @@ The runner and the UI use the same `encode/decode` helpers
 | Shell | Electron + `electron-vite` | real desktop app; main process hosts all I/O |
 | UI | React 18 + TypeScript + react-router 6 + zustand + Tailwind 3 | standard, fast, screenshots look clean |
 | Validation | zod (suite + registry schemas) | one schema set shared by UI, MCP, runner |
-| DB access | better-sqlite3 (read-only for Validate) | synchronous, tiny API; `postinstall: electron-builder install-app-deps` for the native rebuild |
+| DB access | Node built-in `node:sqlite` (DatabaseSync, read-only for Validate) | synchronous, tiny API; **no native module**, so the same code runs under system Node (CLI) and Electron's Node (GUI) with zero ABI/rebuild friction |
 | MCP | `@modelcontextprotocol/sdk` (stdio transport) | the standard TS SDK |
 | Headless runs | `tsx` CLI entry (`src/cli/run.ts`) | run suites without Electron (CI-friendly) |
 
@@ -544,7 +544,7 @@ harness/
     │   ├── registry.ts             # introspect orchestration
     │   ├── runner.ts               # ← the engine (also used by CLI)
     │   ├── suites.ts               # CRUD suites/*.json
-    │   ├── db.ts                   # better-sqlite3 (readonly) + reset
+    │   ├── db.ts                   # node:sqlite (readonly) + reset
     │   └── mcp/{server.ts, tools.ts}
     ├── cli/run.ts                  # npm run run:cli -- <suite-id>
     ├── kb/{index,context,prompts,write}.ts   # kb-forge (npm run kb / kb:check)
@@ -1251,7 +1251,7 @@ below runs without ad-libbing.
 
 | Risk | Mitigation |
 |---|---|
-| better-sqlite3 native rebuild in Electron | `postinstall: electron-builder install-app-deps`; verified in P2/P3 |
+| node:sqlite is an experimental feature in current Node releases | API is stable and identical across the Node versions we support; if it ever moves behind a flag, swap `db/db.ts` for better-sqlite3 (one file) |
 | SQLite lock contention (C writers + Node reader) | WAL + `busy_timeout 5000`; Validate steps are short reads |
 | Gateway forward timing flake in suites | `WaitTimer` steps where ordering across processes matters; reconnect logic in forward.c |
 | Electron packaging (distributables) | Out of scope: `npm run dev` is the story; note it in README |
