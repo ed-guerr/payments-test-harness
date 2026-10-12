@@ -1,6 +1,6 @@
 # harness/src/runner — Intern Guide
 
-> generated 2026-10-12T22:20:15.356Z · kb-forge 0.1 · source sha256:ad000ab24871
+> generated 2026-10-12T22:22:44.518Z · kb-forge 0.1 · source sha256:ad000ab24871
 
 ## Purpose
 

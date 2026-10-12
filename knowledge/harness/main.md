@@ -1,6 +1,6 @@
 # harness/src/main — Intern Guide
 
-> generated 2026-10-12T22:20:15.357Z · kb-forge 0.1 · source sha256:00f4888067e2
+> generated 2026-10-12T22:22:44.519Z · kb-forge 0.1 · source sha256:00f4888067e2
 
 ## Purpose
 

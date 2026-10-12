@@ -21,7 +21,7 @@ const PROCS = ["pay-orders", "ledger", "auth-gateway"];
 const outPath = path.join(__dirname, "..", "src", "protocol", "registry.json");
 
 const registry = {
-  generatedAt: new Date().toISOString(),
+  // no timestamp: a no-op regeneration must produce a zero-diff file
   procs: {},
 };
 

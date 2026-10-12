@@ -1,6 +1,6 @@
 # backend/src/pay_orders — Intern Guide
 
-> generated 2026-10-12T22:20:15.354Z · kb-forge 0.1 · source sha256:c029293ed970
+> generated 2026-10-12T22:22:44.516Z · kb-forge 0.1 · source sha256:c029293ed970
 
 ## Purpose
 

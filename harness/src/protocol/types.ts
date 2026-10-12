@@ -34,7 +34,6 @@ export interface ProcDef {
 }
 
 export interface Registry {
-  generatedAt: string;
   procs: Record<string, ProcDef>;
 }
 

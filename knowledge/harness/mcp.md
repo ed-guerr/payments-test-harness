@@ -1,6 +1,6 @@
 # harness/src/mcp — Intern Guide
 
-> generated 2026-10-12T22:20:15.358Z · kb-forge 0.1 · source sha256:93c04d5dd5d5
+> generated 2026-10-12T22:22:44.520Z · kb-forge 0.1 · source sha256:93c04d5dd5d5
 
 ## Purpose
 

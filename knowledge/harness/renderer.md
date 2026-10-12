@@ -1,6 +1,6 @@
 # harness/src/renderer — Intern Guide
 
-> generated 2026-10-12T22:20:15.358Z · kb-forge 0.1 · source sha256:dfb3d70f44a4
+> generated 2026-10-12T22:22:44.520Z · kb-forge 0.1 · source sha256:dfb3d70f44a4
 
 ## Purpose
 

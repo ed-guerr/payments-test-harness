@@ -1,6 +1,6 @@
 # harness/src/protocol — Intern Guide
 
-> generated 2026-10-12T22:20:15.356Z · kb-forge 0.1 · source sha256:bd1c5fa77085
+> generated 2026-10-12T22:22:44.518Z · kb-forge 0.1 · source sha256:356e651504a7
 
 ## Purpose
 
@@ -12,8 +12,8 @@ Wire protocol layer in TypeScript. registry.json (generated from the C binaries'
 |---|---|
 | codec.ts | 133 |
 | conn.ts | 108 |
-| registry.json | 366 |
-| types.ts | 51 |
+| registry.json | 365 |
+| types.ts | 50 |
 
 ## Domain vocabulary
 
