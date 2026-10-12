@@ -1,5 +1,12 @@
 # Initial Design — Payments Test Harness
 
+> **Status: implemented (all of P1–P6).** This is the design that was built;
+> the README is the current user-facing doc. Where the implementation
+> simplified the plan, it is noted inline (e.g. `node:sqlite` instead of
+> better-sqlite3; the shipped GUI tabs are Suites / Registry / Database; the
+> MCP tool set in §7 is the as-built list). Demo script: see README §"The
+> 6-minute demo".
+
 A self-contained sample system with two runtime parts and a knowledge layer
 that improves how both are used:
 
