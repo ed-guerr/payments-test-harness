@@ -1,0 +1,14 @@
+---
+# Style: Allman braces, 4-space indent, 100 columns.
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 100
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+IndentCaseLabels: true
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
