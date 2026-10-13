@@ -1,5 +1,9 @@
 # payments-test-harness
 
+![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)
+
+<!-- CI badge: add `![CI](https://github.com/<you>/payments-test-harness/actions/workflows/verify.yml/badge.svg)` once the repo has a public remote. -->
+
 A payments backend in C (three TCP processes, function-pointer message
 tables, SQLite) plus a test-harness app in Electron/React/TypeScript that
 runs persisted JSON test suites in realtime — and an **MCP server** that lets
@@ -11,12 +15,11 @@ truth for the wire protocol, generated from the C code, consumed by every
 layer* — and a knowledge pipeline that turns "the code says what fields
 exist" into "the agent knows what the code does".
 
-**~51-second demo** (half speed) — the suites list; a live `pi` session running a local
-27B model (llama.cpp `qwen3`) that authors a double-settle test through the
-harness MCP tools and runs it 10/10 green; back in the app, *that* suite has
-appeared in the list and runs green; then `ledger-chaos-kill` with the
-`ECONNRESET` failure expanded → Protocol Registry → verified balances in the
-per-suite database:
+**~51-second demo** (half speed) — a live `pi` session running a local 27B
+model (llama.cpp `qwen3`) authors a double-settle test through the harness
+MCP tools and runs it 10/10 green; *that* suite then runs green in the app;
+then `ledger-chaos-kill` with the `ECONNRESET` failure expanded → Protocol
+Registry → verified balances in the per-suite database:
 
 ![demo](docs/demo.gif)
 
@@ -104,12 +107,9 @@ to `main`:
 | `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
 | `eval` (opt-in) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist (`.github/workflows/eval.yml`) — on a schedule, on demand, and on pushes touching the agent surface. |
 
-The harness itself is unit-tested with the built-in `node:test` runner
-(`npm run test:unit`, 23 tests, no test framework added): the codec
-round-trips every message in the registry, `matchAck` pin semantics, KB
-search finds the row the eval depends on, `validateSuite` rejects the
-hostile-suite cases (unknown messages, path-traversal names, non-SELECT
-dbAssert), and the read-only db handle refuses DDL.
+The harness is unit-tested with the built-in `node:test` runner (`npm run
+test:unit`, 23 tests, no test framework added — the repo's npm policy blocks
+install scripts by default).
 
 ## Benchmark
 
@@ -134,48 +134,60 @@ three-process cluster.
 
 The GIF is one unedited session; the eval is the controlled experiment
 behind it. `harness/src/eval/` runs a model-agnostic agent (OpenAI-
-compatible chat endpoint + the same 15 MCP tools an external client would
-use) through 11 plain-English tasks, twice per task — **KB on** (15 tools,
-`kb_search`/`kb_read` live) vs **KB off** (`MCP_NO_KB=1`, 13 tools) — and
-scores the artifact, not the agent's word: the generated suite is re-run on
-a fresh cluster and checked against an exact ground-truth checklist
-(balance math from the seed data, ack status codes, side-effect rows). No
-LLM judge. `pass` = suite created + green re-run + full checklist.
+compatible chat + the same 15 MCP tools an external client would use)
+through 11 plain-English tasks, each with **KB on** vs **KB off**
+(`MCP_NO_KB=1`) — and scores the artifact, not the agent's word: the
+generated suite is re-run on a fresh cluster and checked against an exact
+ground-truth checklist (seed-data balance math, ack status codes,
+side-effect rows). No LLM judge. `pass` = suite created + green re-run +
+full checklist.
 
 ```bash
 npm run eval:smoke            # 3 tasks x 1 run x both variants
 npm run eval                  # 11 tasks x 3 runs x both variants
 ```
 
-Committed result — **Qwen3.8-27B Q4_K_M** (the GIF's model, via llama.cpp),
-3 runs per task, temperature 0, full-fidelity traces in
-[`harness/eval-reports/sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json):
+Committed results — both models via llama.cpp on a LAN GPU box, 3 runs per
+task, temperature 0. Trimmed full-fidelity samples (agent-authored suites
+intact, tool results truncated) in
+[`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json) and
+[`sample-gemma-12b.json`](harness/eval-reports/sample-gemma-12b.json):
 
-| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) |
-|---|---|---|---|---|---|---|
-| **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 |
-| **kb-off** | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 |
+| model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) |
+|---|---|---|---|---|---|---|---|
+| **Qwen3.8-27B Q4_K_M** (the GIF's model) | **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 |
+| Qwen3.8-27B Q4_K_M | kb-off | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 |
+| Gemma-4-12B QAT Q4_0 | **kb-on** | **12/33** | 21/33 | 15/33 | 14.4 | 0.9 | 14 |
+| Gemma-4-12B QAT Q4_0 | kb-off | 8/33 | 14/33 | 8/33 | 18.1 | 0.8 | 50 |
 
-What the numbers say, honestly: a strong local model plus the self-correcting
-loop (red suite → inspect → `update_suite` → re-run) can converge even
-schema-only — so on a 27B the KB's value shows as **efficiency**, not as
-pass-or-fail: KB-on suites were one-shot (avg 1.0 re-runs) vs 1.3 KB-off,
-and the single failure (KB-off, `unknown-account`, 2/3) is exactly the class
-of miss the KB exists to prevent. Expect the gap to widen toward pass rate
-on weaker models. Two tasks are KB-sensitive by construction — their
-ground truth lives only in the intern guides (e.g. *where* settlement money
-moves), and the prompts never leak it. Methodology, task set, and how to
-add tasks: [`docs/eval.md`](docs/eval.md).
+What the numbers say, honestly — the KB's measurable value **moves from
+efficiency to pass-or-fail as the model gets weaker**:
 
-The eval is also a regression gate in two layers. **Layer A** is
-deterministic: `npm run eval:replay` (in `npm run verify`, ~4 s, no LLM)
-replays recorded agent tool-call traces against the live MCP server and
-asserts properties of each result — catching tool renames, KB content
-regressions (the KB on/off `notes` pin), and error-message wording changes
-on every push. **Layer B** is a real-model job (`.github/workflows/eval.yml`)
-that runs the full eval and fails on regression below the per-model baseline
-committed in `harness/src/eval/baseline.json`; it is opt-in via the
-`EVAL_RUN_EVAL` repository variable + `EVAL_API_*` secrets.
+- **Qwen3-27B (strong):** pass rate saturates (33 vs 32); the value shows
+  as *efficiency* — one-shot suites (1.0 vs 1.3 re-runs), fewer tool calls
+  (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
+  class of miss the KB exists to prevent.
+- **Gemma-4-12B (weaker):** the value shows in the *pass rate itself* —
+  12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
+  p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs
+  exhaust the 25-step tool budget; the KB keeps a weak model inside it
+  (3/3 vs 2/3 on KB-sensitive `gateway-forward-completes`).
+- The tasks **stratify the models**: `settle-moves-money` (the prompt never
+  says *where* settlement money goes) is 3/3 for Qwen in both variants and
+  0/3 for Gemma in both. No single task discriminates; the set does. Two
+  tasks are KB-sensitive by construction — their ground truth lives only in
+  the intern guides, and the prompts never leak it.
+
+Methodology, task set, and how to add tasks: [`docs/eval.md`](docs/eval.md).
+
+The eval doubles as a regression gate in two layers. **Layer A**
+(`npm run eval:replay`, in `npm run verify`, ~4 s, no LLM) replays recorded
+agent tool-call traces against the live MCP server and asserts properties of
+each result — catching tool renames, KB content regressions, and
+error-message wording changes on every push. **Layer B**
+(`.github/workflows/eval.yml`) runs the full eval and fails on regression
+below the per-model baseline in `harness/src/eval/baseline.json`; opt-in via
+the `EVAL_RUN_EVAL` repository variable + `EVAL_API_*` secrets.
 
 ## The wire protocol
 
@@ -223,9 +235,8 @@ above is that session, unedited):
 Seven suites are committed: `payment-happy-path` (10/10 green),
 `ledger-chain-reversals` (22 steps), `insufficient-funds`, `cancel-payment`,
 `transfer-800`, `ledger-chaos-kill` (kills the ledger mid-run, asserts the
-typed failure with `expectError`, verifies state is exactly pre-kill), and
-`assertion-failure-demo` (demonstrates a failing run with an
-expected-vs-actual diff).
+typed failure, verifies state is exactly pre-kill), and
+`assertion-failure-demo` (a failing run with an expected-vs-actual diff).
 
 ```bash
 npm run run:cli -- suites/insufficient-funds.json
@@ -233,10 +244,8 @@ npm run run:cli -- suites/insufficient-funds.json
 
 Every run — from the app, the CLI, or the MCP server — also writes a
 self-contained **HTML report** to `docs/test-runs/<suite>_<timestamp>.html`
-(styled like the app: dark by default, paper beige under
-`prefers-color-scheme: light`). It shows each step's action, the
-pass/fail status, and the assertions with expected vs actual values —
-failing rows and mismatched fields highlighted in red.
+(styled like the app, dark by default): each step's action, pass/fail
+status, and assertions with expected vs actual — mismatches highlighted.
 
 ## Knowledge pipeline
 
@@ -266,8 +275,7 @@ Risks / Inter-process interactions). Consumers:
 
 ## The 6-minute demo
 
-(Quick version: the half-speed GIF at the top of this file — step 5 is the
-part it plays live.)
+(Quick version: the half-speed GIF at the top — step 5 is the part it plays live.)
 
 
 1. **0:00 Build & introspect.** `make -C backend && npm run gen:registry` —
@@ -350,6 +358,36 @@ docs/
   process kills are contained in three layers (authoring validation,
   read-only execution, disposable clusters) and every layer is tested:
   [`docs/security.md`](docs/security.md).
+
+## Lessons learned
+
+From building the eval and the A/B — each one changed a design decision:
+
+1. **A strong model saturates pass rate.** On the 27B the KB's effect was
+   invisible on pass/fail (33 vs 32) and only visible in efficiency
+   (one-shot suites). If your A/B shows no difference on a strong model,
+   measure *how* it got there (tool calls, re-runs, tokens) before
+   concluding the feature is worthless — and expect the gap to appear in
+   pass rate on weaker models (it did: 12 vs 8 on the 12B).
+2. **Context budget is a first-class experiment parameter.** The same 12B
+   model passed 2 of 6 smoke runs (1 run/task, three tasks) at an 8k
+   context (LM Studio) but 5 of 9 (3 runs/task, same three tasks) at 32k
+   (llama.cpp). The context window is not the only variable you are holding
+   constant.
+3. **Disable thinking tokens by default, measure, then decide.** Qwen3's
+   reasoning mode multiplies completion tokens ~3× for this task and buys
+   nothing on the score; the eval sends `enable_thinking: false` unless
+   `EVAL_THINKING=1` (`harness/src/eval/agent.ts`).
+4. **Score the artifact, never the agent's words.** Programmatic checklist
+   + independent re-run (`src/eval/judge.ts`) is what made every number
+   here reproducible in one command; an LLM judge would have made it a
+   vibe.
+5. **Recorded traces put LLM behavior in CI without an LLM.** The replay
+   gate (roadmap R2) exists because "the agent worked" is not testable on
+   every push; "the agent's recorded session still behaves" is.
+6. **Generated artifacts must be hash-pinned.** The KB went stale the first
+   time a source file changed; the manifest hash check (`kb:check`, in
+   `npm run verify`) is now the reason that can't be silent.
 
 Conventions, gates, and commit policy: [`docs/conventions/conventions.md`](docs/conventions/conventions.md).
 

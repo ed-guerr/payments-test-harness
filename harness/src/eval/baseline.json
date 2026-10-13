@@ -5,6 +5,11 @@
       "source": "full eval run 2026-10-13 — Qwen3.8-27B Q4_K_M via llama.cpp, temp 0, 3 runs/task, thinking off",
       "kb": { "pass": 33, "total": 33 },
       "no_kb": { "pass": 32, "total": 33 }
+    },
+    "gemma-4-12b-it-qat-q4_0.gguf": {
+      "source": "full eval run 2026-10-13 — Gemma-4-12B QAT Q4_0 via llama.cpp (LAN, port 8082), temp 0, 3 runs/task. Model id is the GGUF path the single-model llama.cpp server reports",
+      "kb": { "pass": 12, "total": 33 },
+      "no_kb": { "pass": 8, "total": 33 }
     }
   }
 }

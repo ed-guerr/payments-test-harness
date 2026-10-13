@@ -30,11 +30,16 @@ npm run eval -- --variant on --model <id> --base <url>
 npm run eval -- --min-pass 2   # override the baseline: exit 1 if any variant < 2
 ```
 
-Example against the LAN llama.cpp server (Qwen3.8-27B Q4_K_M, the model in
-the demo GIF):
+Examples against LAN llama.cpp servers (the two models behind the README
+table; single-model llama.cpp servers list the GGUF *path* as the model id):
 
 ```bash
+# Qwen3.8-27B Q4_K_M (the model in the demo GIF), port 8080
 npm run eval:smoke -- --base http://<your-lan-gpu-box>:8080/v1 --model qwen3 --key <llama.cpp password>
+
+# Gemma-4-12B QAT Q4_0, port 8082
+npm run eval:smoke -- --base http://<your-lan-gpu-box>:8082/v1 \
+  --model gemma-4-12b-it-qat-q4_0.gguf --key <llama.cpp password>
 ```
 
 Preflight checks: backend binaries built, model server reachable at
@@ -115,19 +120,22 @@ Reports land in `harness/eval-reports/` (gitignored, except committed
 | p50 wall | median wall time, agent loop + independent re-run |
 | tokens in / out | summed across runs (from the model server's usage) |
 | cost (usd) | per-run cost from the committed price table
-  (`src/eval/pricing.ts`, keyed by model id); `n/a` when the model has no
-  committed price — never a guess. Local models are listed at $0.00 |
+  (`src/eval/pricing.ts`, keyed by model id); GGUF path ids are treated as
+  local ($0.00); `n/a` when the model has no committed price — never a guess |
 
 Interpretation rules:
 
-- **The honest expectation, measured on Qwen3-27B (see committed sample
-  report): pass rates end up close, because a strong model plus the
-  self-correcting loop (red run → inspect → `update_suite` → re-run) can
-  converge even without the KB.** The KB's value shows in *efficiency*
-  (avg suite runs = how often the agent had to re-run after a red suite,
-  and tool calls) and in *one-shot correctness* on the KB-sensitive tasks.
-  Expect KB on ≤ KB off on avg suite runs / tool calls; expect the gap to
-  widen (toward pass rate) on weaker models.
+- **The KB's measurable value moves from efficiency to pass-or-fail as the
+  model gets weaker — measured on both models, not predicted.** On
+  Qwen3-27B (strong), pass rates end up close (33 vs 32) because a strong
+  model plus the self-correcting loop (red run → inspect → `update_suite`
+  → re-run) can converge even without the KB; the value shows in
+  *efficiency* (avg suite runs 1.0 vs 1.3, tool calls 13.2 vs 14.6) and in
+  one-shot correctness on the KB-sensitive tasks. On Gemma-4-12B (weaker)
+  the same A/B shows in the *pass rate itself* (12 vs 8, +50% relative),
+  with the mechanism visible: 31 of its 66 runs exhaust the 25-step tool
+  budget, and the KB is what keeps a weak model inside it.
+- Expect KB on ≤ KB off on avg suite runs / tool calls on any model.
 - If a run shows KB on *worse* than KB off on any column, the experiment is
   broken or the KB row is stale — fix the artifact, never the number.
 - Numbers are from **3 runs per task** (temperature 0 is not determinism on
