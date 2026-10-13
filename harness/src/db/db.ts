@@ -56,23 +56,30 @@ export class Db {
   }
 }
 
+export interface CheckRowResult {
+  /** Human-readable mismatches (empty = pass). */
+  problems: string[];
+  /** The row the query returned (null when no row matched). */
+  row: DbRow | null;
+}
+
 /**
  * Assert that a single-row query result matches `expect` on the listed
- * columns (partial match, like wire acks). Returns a list of human-readable
- * mismatches (empty = pass).
+ * columns (partial match, like wire acks). Returns the mismatches plus the
+ * row itself (so callers can show expected vs actual).
  */
 export function checkRow(
   db: Db,
   sql: string,
   params: (string | number | null)[],
   expect: Record<string, string | number | null>,
-): string[] {
-  const row = db.get(sql, params);
-  if (!row) return [`no row for: ${sql}`];
+): CheckRowResult {
+  const row = db.get(sql, params) ?? null;
+  if (!row) return { problems: [`no row for: ${sql}`], row };
   const problems: string[] = [];
   for (const [col, want] of Object.entries(expect)) {
     const got = row[col];
     if (got !== want) problems.push(`${col}: expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
   }
-  return problems;
+  return { problems, row };
 }

@@ -7,7 +7,9 @@ harness/node_modules/
 harness/dist/
 harness/data/
 harness/runs/
+docs/test-runs/
 
 # logs & temp
 *.log
 .DS_Store
+/.pi/mcp.json

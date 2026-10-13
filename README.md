@@ -175,6 +175,13 @@ expected-vs-actual diff).
 npm run run:cli -- suites/insufficient-funds.json
 ```
 
+Every run — from the app, the CLI, or the MCP server — also writes a
+self-contained **HTML report** to `docs/test-runs/<suite>_<timestamp>.html`
+(styled like the app: dark by default, paper beige under
+`prefers-color-scheme: light`). It shows each step's action, the
+pass/fail status, and the assertions with expected vs actual values —
+failing rows and mismatched fields highlighted in red.
+
 ## Knowledge pipeline
 
 ```bash

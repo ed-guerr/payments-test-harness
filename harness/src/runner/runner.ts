@@ -18,10 +18,12 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { REPORTS_DIR } from "../backend/paths";
 import { checkRow, Db } from "../db/db";
 import * as codec from "../protocol/codec";
 import type { Conn } from "../protocol/conn";
 import type { FieldValue, Frame } from "../protocol/types";
+import { writeHtmlReport } from "./report";
 
 export interface SendStep {
   id: string;
@@ -92,6 +94,12 @@ export interface RunnerOptions {
   runsDir?: string;
   /** Chaos: kill a backend process mid-suite. True if a live process was killed. */
   killProcess?: (proc: string, signal: NodeJS.Signals) => boolean;
+  /**
+   * Each finished run also writes a self-contained HTML report to
+   * <reportsDir>/<suite>_<ts>.html. Defaults to <repo>/docs/test-runs;
+   * pass "" to disable.
+   */
+  reportsDir?: string;
 }
 
 export class Runner {
@@ -125,19 +133,40 @@ export class Runner {
       durationMs: Date.now() - t0,
     };
     this.emit({ type: "suite-result", ...result });
-    this.persistRun(result, steps);
+    // One timestamp for both artifacts so the run JSON and the HTML report
+    // pair up by name.
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const at = new Date().toISOString();
+    this.persistRun(result, steps, ts, at);
+    this.writeReport(suite, result, steps, ts, at);
     return result;
   }
 
-  private persistRun(result: SuiteResult, steps: (StepResult & StepTiming)[]): void {
+  private persistRun(result: SuiteResult, steps: (StepResult & StepTiming)[], ts: string, at: string): void {
     if (!this.opts.runsDir) return;
     try {
       fs.mkdirSync(this.opts.runsDir, { recursive: true });
-      const ts = new Date().toISOString().replace(/[:.]/g, "-");
       const file = path.join(this.opts.runsDir, `${result.suite}-${ts}.json`);
-      fs.writeFileSync(file, JSON.stringify({ at: new Date().toISOString(), ...result, steps }, null, 2) + "\n");
+      fs.writeFileSync(file, JSON.stringify({ at, ...result, steps }, null, 2) + "\n");
     } catch {
       // persisting is best-effort; never fail a run because of it
+    }
+  }
+
+  /** Best-effort HTML report; a report failure must never fail a run. */
+  private writeReport(
+    suite: Suite,
+    result: SuiteResult,
+    steps: (StepResult & StepTiming)[],
+    ts: string,
+    at: string,
+  ): void {
+    const dir = this.opts.reportsDir ?? REPORTS_DIR();
+    if (!dir) return;
+    try {
+      writeHtmlReport({ suite, result, steps, at }, dir, ts);
+    } catch {
+      // reports are best-effort; never fail a run because of them
     }
   }
 
@@ -258,11 +287,13 @@ export class Runner {
 
   private doDbAssert(suite: string, step: DbAssertStep): StepResult {
     const { sql, params, expect } = step.dbAssert;
-    const problems = checkRow(this.db, sql, params ?? [], expect);
+    const { problems, row } = checkRow(this.db, sql, params ?? [], expect);
+    // Attach the actual row so reports can show expected vs actual per column.
+    const received = { sql, row };
     if (problems.length > 0) {
-      return { suite, stepId: step.id, ok: false, detail: problems.join("; ") };
+      return { suite, stepId: step.id, ok: false, detail: problems.join("; "), received };
     }
-    return { suite, stepId: step.id, ok: true, detail: `row matches ${JSON.stringify(expect)}` };
+    return { suite, stepId: step.id, ok: true, detail: `row matches ${JSON.stringify(expect)}`, received };
   }
 
   /** Map a received msgId to its registry name (handles ErrorAck 255). */

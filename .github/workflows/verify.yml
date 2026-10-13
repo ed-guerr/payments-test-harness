@@ -62,7 +62,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: run-reports
-          path: harness/runs/*.json
+          path: |
+            harness/runs/*.json
+            docs/test-runs/*.html
           if-no-files-found: ignore
 
   e2e:

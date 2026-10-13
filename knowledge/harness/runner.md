@@ -1,6 +1,6 @@
 # harness/src/runner — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T05:36:39.504Z · kb-forge 0.2 · source sha256:d210acbbccd8
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T07:27:28.340Z · kb-forge 0.2 · source sha256:77c422addda1
 
 ## Purpose
 
@@ -11,7 +11,8 @@ The suite execution engine. Interprets suite JSON (send / dbAssert / delayMs ste
 | file | ~lines |
 |---|---|
 | cli.ts | 97 |
-| runner.ts | 294 |
+| report.ts | 537 |
+| runner.ts | 325 |
 
 ## Domain vocabulary
 
@@ -29,8 +30,17 @@ The suite execution engine. Interprets suite JSON (send / dbAssert / delayMs ste
 | `parseArgs(argv: string[])` | cli.ts:23 |
 | `printEvent(e: RunnerEvent, json: boolean)` | cli.ts:34 |
 | `main` | cli.ts:54 |
-| `Runner` | runner.ts:97 |
-| `sleep(ms: number)` | runner.ts:291 |
+| `fmt(v: unknown)` | report.ts:42 |
+| `actionFor(step: Step)` | report.ts:47 |
+| `assertionsFor(step: Step, r: StepResult & StepTiming)` | report.ts:62 |
+| `kv(rows: [string, string][], label?: string)` | report.ts:102 |
+| `stepDefinition(step: Step)` | report.ts:115 |
+| `stepResult(r: StepResult & StepTiming)` | report.ts:155 |
+| `stepRows(step: Step, r: StepResult & StepTiming)` | report.ts:167 |
+| `timelineRows(suite: Suite, steps: (StepResult & StepTiming)` | report.ts:208 |
+| `renderHtmlReport(input: ReportInput)` | report.ts:309 |
+| `Runner` | runner.ts:105 |
+| `sleep(ms: number)` | runner.ts:322 |
 
 ## Common modification points
 

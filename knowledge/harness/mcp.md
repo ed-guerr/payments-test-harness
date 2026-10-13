@@ -1,6 +1,6 @@
 # harness/src/mcp — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T05:36:39.507Z · kb-forge 0.2 · source sha256:c5379bf60849
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T07:27:28.343Z · kb-forge 0.2 · source sha256:c5379bf60849
 
 ## Purpose
 
