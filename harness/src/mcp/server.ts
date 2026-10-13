@@ -20,7 +20,7 @@ import {
   DATA_DIR,
   packageRoot,
   RUNS_DIR,
-  SUITES_DIR,
+  safeSuiteFile,
 } from "../backend/paths";
 import { listSuites, loadSuite, validateSuite } from "../backend/suites";
 import { Db } from "../db/db";
@@ -44,9 +44,9 @@ function text(payload: unknown): { content: { type: "text"; text: string }[] } {
 }
 
 function suiteFile(name: string): string {
-  // Names come from list_suites or an agent-supplied id; allow only safe ids.
-  if (!/^[a-z0-9][a-z0-9-]*$/i.test(name)) throw new Error(`unsafe suite name: ${name}`);
-  return path.join(SUITES_DIR(), `${name}.json`);
+  // Names come from list_suites or an agent-supplied id; safeSuiteFile
+  // (backend/paths) enforces the safe-id charset (no traversal/hidden files).
+  return safeSuiteFile(name);
 }
 
 /* ------------------------------------------------------------------ */

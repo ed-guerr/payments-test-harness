@@ -287,13 +287,24 @@ export class Runner {
 
   private doDbAssert(suite: string, step: DbAssertStep): StepResult {
     const { sql, params, expect } = step.dbAssert;
-    const { problems, row } = checkRow(this.db, sql, params ?? [], expect);
+    const { problems, row } = checkRow(this.assertDb(), sql, params ?? [], expect);
     // Attach the actual row so reports can show expected vs actual per column.
     const received = { sql, row };
     if (problems.length > 0) {
       return { suite, stepId: step.id, ok: false, detail: problems.join("; "), received };
     }
     return { suite, stepId: step.id, ok: true, detail: `row matches ${JSON.stringify(expect)}`, received };
+  }
+
+  /**
+   * Read-only view used for dbAssert: suite SQL is agent-authored, so the
+   * assertion path must be structurally incapable of mutating the database
+   * (the runner's own handle is the cluster's read-write connection).
+   */
+  private roDb: Db | null = null;
+  private assertDb(): Db {
+    if (!this.roDb) this.roDb = Db.readOnly(this.db.file);
+    return this.roDb;
   }
 
   /** Map a received msgId to its registry name (handles ErrorAck 255). */

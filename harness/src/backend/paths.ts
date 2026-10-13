@@ -23,6 +23,17 @@ export function packageRoot(): string {
 }
 
 export const SUITES_DIR = (): string => path.join(packageRoot(), "suites");
+
+/**
+ * Resolve a suite id to its file path. Ids come from the agent (MCP
+ * create_suite/update_suite) or the file system (list_suites), so the
+ * charset is the trust boundary: only `[a-z0-9-]` (no dots, no slashes),
+ * which rules out path traversal ("../../etc/evil") and hidden files.
+ */
+export function safeSuiteFile(name: string): string {
+  if (!/^[a-z0-9][a-z0-9-]*$/i.test(name)) throw new Error(`unsafe suite name: ${name}`);
+  return path.join(SUITES_DIR(), `${name}.json`);
+}
 export const DATA_DIR = (): string => path.join(packageRoot(), "data");
 /** Persisted run results (one JSON file per suite run). */
 export const RUNS_DIR = (): string => path.join(packageRoot(), "runs");

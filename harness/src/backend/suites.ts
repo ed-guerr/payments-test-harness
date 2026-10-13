@@ -51,6 +51,15 @@ export function validateSuite(s: Suite): void {
         throw new Error(`step ${i} (${step.id}): expectError must be a boolean`);
       }
     }
+    if ("dbAssert" in step) {
+      const sql = (step.dbAssert?.sql ?? "").trim();
+      if (!/^(SELECT|WITH)\b/i.test(sql)) {
+        throw new Error(`step ${i} (${step.id}): dbAssert.sql must be a SELECT or WITH statement (the runner executes it on a read-only connection)`);
+      }
+      if (sql.includes(";")) {
+        throw new Error(`step ${i} (${step.id}): dbAssert.sql must be a single statement (no semicolons)`);
+      }
+    }
     if ("killProcess" in step) {
       const { proc, signal } = step.killProcess;
       if (!codec.listProcs().includes(proc)) {
