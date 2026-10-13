@@ -1,6 +1,6 @@
 {
   "name": "no-double-settle",
-  "description": "Settle a completed payment, then attempt a second Settle: it must be rejected (ST_SETTLED=2) and no additional funds may move",
+  "description": "A payment can only be settled once: second Settle returns ack status 2 (already settled) and moves no funds",
   "steps": [
     {
       "id": "create",
@@ -29,11 +29,12 @@
         }
       },
       "expectAck": {
-        "approved": 1
+        "approved": 1,
+        "auth_code": "AU-0002001"
       }
     },
     {
-      "id": "wait-complete-forward",
+      "id": "wait-complete",
       "delayMs": 300
     },
     {
@@ -52,8 +53,32 @@
       }
     },
     {
-      "id": "wait-settle-forward",
+      "id": "wait-settle",
       "delayMs": 300
+    },
+    {
+      "id": "assert-settled",
+      "dbAssert": {
+        "sql": "SELECT status FROM payments WHERE txn_id = ?",
+        "params": [
+          2001
+        ],
+        "expect": {
+          "status": "settled"
+        }
+      }
+    },
+    {
+      "id": "assert-reserve-after-first",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "RESERVE"
+        ],
+        "expect": {
+          "balance_cents": 1050000
+        }
+      }
     },
     {
       "id": "settle-second",
@@ -70,7 +95,7 @@
       }
     },
     {
-      "id": "assert-status-still-settled",
+      "id": "assert-still-settled",
       "dbAssert": {
         "sql": "SELECT status FROM payments WHERE txn_id = ?",
         "params": [
@@ -82,19 +107,7 @@
       }
     },
     {
-      "id": "assert-payer-debited-once",
-      "dbAssert": {
-        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
-        "params": [
-          "ACCT-001"
-        ],
-        "expect": {
-          "balance_cents": 450000
-        }
-      }
-    },
-    {
-      "id": "assert-reserve-credited-once",
+      "id": "assert-reserve-unchanged",
       "dbAssert": {
         "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
         "params": [

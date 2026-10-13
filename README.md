@@ -11,9 +11,9 @@ truth for the wire protocol, generated from the C code, consumed by every
 layer* — and a knowledge pipeline that turns "the code says what fields
 exist" into "the agent knows what the code does".
 
-**~57-second demo** (half speed) — the suites list; a live `pi` session running a local
+**~51-second demo** (half speed) — the suites list; a live `pi` session running a local
 27B model (llama.cpp `qwen3`) that authors a double-settle test through the
-harness MCP tools and runs it 9/9 green; back in the app, *that* suite has
+harness MCP tools and runs it 10/10 green; back in the app, *that* suite has
 appeared in the list and runs green; then `ledger-chaos-kill` with the
 `ECONNRESET` failure expanded → Protocol Registry → verified balances in the
 per-suite database:
@@ -147,11 +147,14 @@ above is that session, unedited):
 {
   "id": "create",
   "send": { "to": "pay-orders", "msg": "CreatePayment",
-            "fields": { "txn_id": 1001, "account": "ACCT-001",
+            "fields": { "txn_id": 2001, "account": "ACCT-001",
                         "amount_cents": 50000, "currency": "USD" } },
   "expectAck": { "status": 0 }
 }
 ```
+
+(10 steps total: create → authorize → complete → settle → settle again
+(rejected), with `dbAssert`s proving the balances.)
 
 - `send` — encode via the registry codec, wait for the matching ack;
   `expectAck` is a **partial match** on fields; `expectError: true` inverts
@@ -251,7 +254,7 @@ docs/
   conventions/conventions.md the project's conventions & gates
   protocol.md · mcp.md · knowledge.md
   designs/          sample designer output (KB-grounded vs schema-only pair)
-  demo.gif          the ~57s half-speed demo (linked at the top of the
+  demo.gif          the ~51s half-speed demo (linked at the top of the
                     README; regenerate with the harness/scripts/demo-gif/
                     pipeline)
 ```

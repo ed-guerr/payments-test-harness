@@ -31,7 +31,7 @@ PROMPT_AT_S = 9.0  # let the TUI + MCP server finish booting before typing
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PROJECT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
-DEFAULT_PI_CMD = "pi --provider llamacpp --model qwen3 --name gif-demo"
+DEFAULT_PI_CMD = "pi --provider llamacpp --model qwen3 --thinking off --name gif-demo"
 
 PROMPT = sys.argv[1]
 PROJECT = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_PROJECT

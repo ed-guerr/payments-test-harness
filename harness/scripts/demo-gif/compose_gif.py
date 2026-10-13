@@ -50,7 +50,7 @@ TARGETS = {
 }
 # Terminal layout (10Hz capture): [0, 90) boot, [90, -65) activity, last 65 hold.
 PI_BOOT, PI_HOLD = 90, 65
-PI_BOOT_KEEP, PI_HOLD_KEEP, PI_EVERY = 10, 25, 5
+PI_BOOT_KEEP, PI_HOLD_KEEP, PI_EVERY = 10, 25, 10
 
 
 def pick(seq: list[str], n: int) -> list[str]:
