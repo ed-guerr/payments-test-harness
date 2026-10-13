@@ -67,11 +67,10 @@ cd harness
 npm install
 npm run gen:registry
 
-# 3. Verify everything
-make -C ../backend check        # ASan+UBSan + 28-check protocol smoke test
-npm run run:cli -- suites/payment-happy-path.json   # headless suite run (green)
-npm run kb:check                # knowledge base up to date
-npm run test:mcp                # MCP server self-test (agent loop)
+# 3. Verify everything — one command:
+npm run verify                  # backend build + ASan/UBSan smoke (28 checks) + fmt
+                                # + typecheck + happy-path suite + MCP self-test
+                                # (KB on/off A/B) + KB staleness check
 
 # 4. The app
 npm start                       # Electron: suites / registry / database

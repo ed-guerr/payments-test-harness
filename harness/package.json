@@ -20,6 +20,7 @@
     "run:cli": "tsx src/runner/cli.ts",
     "mcp": "tsx src/mcp/server.ts",
     "test:mcp": "node scripts/mcp-self-test.js",
+    "verify": "sh scripts/verify.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
