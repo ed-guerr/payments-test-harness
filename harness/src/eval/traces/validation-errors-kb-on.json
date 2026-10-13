@@ -1,0 +1,35 @@
+{
+  "id": "validation-errors-kb-on",
+  "source": "synthetic — pins the error-message steering surface: structured validation errors, kbHints on failure, and the safe-suite-name boundary. Every call here MUST fail (isError) with the expected message.",
+  "noKb": false,
+  "calls": [
+    {
+      "tool": "create_suite",
+      "args": {
+        "name": "eval-replay-hostile",
+        "steps": [
+          { "id": "refund", "send": { "to": "pay-orders", "msg": "RefundPayment", "fields": { "txn_id": 1 } } }
+        ]
+      },
+      "expect": { "ok": false, "errorContains": ["unknown message", "RefundPayment"] }
+    },
+    {
+      "tool": "create_suite",
+      "args": {
+        "name": "../../etc/evil",
+        "steps": [{ "id": "wait", "delayMs": 1 }]
+      },
+      "expect": { "ok": false, "errorContains": ["unsafe suite name"] }
+    },
+    {
+      "tool": "create_suite",
+      "args": {
+        "name": "eval-replay-hostile",
+        "steps": [
+          { "id": "drop", "dbAssert": { "sql": "DROP TABLE accounts", "params": [], "expect": {} } }
+        ]
+      },
+      "expect": { "ok": false, "errorContains": ["SELECT or WITH"] }
+    }
+  ]
+}

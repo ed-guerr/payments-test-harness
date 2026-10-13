@@ -131,4 +131,12 @@ export interface EvalReport {
   config: EvalConfig;
   runs: TaskRunRecord[];
   summary: VariantSummary[];
+  /** Regression gate (roadmap R2 Layer B): per-variant min pass for this model
+   *  (committed baseline, or --min-pass override); failed lists violations,
+   *  skipped lists variants where the baseline wasn't comparable. */
+  gate?: {
+    minPass: Partial<Record<Variant, number>>;
+    failed: string[];
+    skipped: string[];
+  };
 }

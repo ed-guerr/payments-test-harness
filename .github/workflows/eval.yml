@@ -1,0 +1,87 @@
+# Real-model eval in CI — the optional half of the regression gate (roadmap R2,
+# Layer B). The deterministic half (recorded-trace replay) runs in verify.yml
+# on every push with no LLM; this workflow needs a live model.
+#
+# OFF BY DEFAULT: it only runs when the repository variable EVAL_RUN_EVAL is
+# "true" (Settings → Variables). When enabled, it reads the model endpoint
+# from repository secrets:
+#
+#   EVAL_API_BASE   OpenAI-compatible base URL, e.g. https://api.openai.com/v1
+#   EVAL_API_MODEL  model id as the server lists it
+#   EVAL_API_KEY    API key (may be empty for local servers)
+#
+# Triggers: manual (workflow_dispatch), weekly (Mondays 04:00 UTC), and on
+# pushes to main that touch the agent surface (eval code, MCP server,
+# knowledge base, protocol schema).
+#
+# It runs the FULL eval (11 tasks x 3 runs x KB on/off) and applies the
+# per-model baseline gate committed in harness/src/eval/baseline.json —
+# a variant regressing below its baseline fails the run.
+name: eval
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "harness/src/eval/**"
+      - "harness/src/mcp/**"
+      - "knowledge/**"
+      - "backend/db/**"
+      - "harness/src/eval/baseline.json"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    name: real-model eval + baseline gate
+    # Repo variable gate: no secrets needed until it is turned on.
+    if: ${{ vars.EVAL_RUN_EVAL == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EVAL_API_BASE: ${{ secrets.EVAL_API_BASE }}
+      EVAL_API_MODEL: ${{ secrets.EVAL_API_MODEL }}
+      EVAL_API_KEY: ${{ secrets.EVAL_API_KEY }}
+      EVAL_TEMPERATURE: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: harness/package-lock.json
+
+      - name: Install harness deps
+        working-directory: harness
+        run: npm ci
+
+      - name: Build backend
+        working-directory: backend
+        run: make
+
+      # Full 11-task eval, KB on vs off, 3 runs each; the committed baseline
+      # for the model then gates the result (non-zero exit on regression).
+      - name: npm run eval
+        working-directory: harness
+        run: npm run eval
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: |
+            harness/eval-reports/*.json
+            harness/eval-reports/*.md
+          if-no-files-found: ignore

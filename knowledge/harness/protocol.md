@@ -1,6 +1,6 @@
 # harness/src/protocol — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T07:27:28.341Z · kb-forge 0.2 · source sha256:356e651504a7
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T18:10:00.453Z · kb-forge 0.2 · source sha256:bb9d9b834c74
 
 ## Purpose
 
@@ -10,6 +10,7 @@ Wire protocol layer in TypeScript. registry.json (generated from the C binaries'
 
 | file | ~lines |
 |---|---|
+| codec.test.ts | 59 |
 | codec.ts | 133 |
 | conn.ts | 108 |
 | registry.json | 365 |
@@ -27,6 +28,7 @@ Wire protocol layer in TypeScript. registry.json (generated from the C binaries'
 
 | function | defined at |
 |---|---|
+| `sampleFields(proc: string, name: string)` | codec.test.ts:11 |
 | `listProcs` | codec.ts:16 |
 | `getProc(proc: string)` | codec.ts:20 |
 | `findMessage(proc: string, name: string)` | codec.ts:32 |

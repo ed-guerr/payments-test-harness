@@ -20,13 +20,14 @@ experiment behind it.
 #   EVAL_RUN_TIMEOUT_MS (default 900000)
 #   EVAL_THINKING=1  enable Qwen-style reasoning tokens (default off)
 
-npm run eval            # 10 tasks x 3 runs x {kb-on, kb-off}
-npm run eval:smoke      # 3 tasks x 1 run x both variants (fast sanity + CI candidate)
+npm run eval            # 11 tasks x 3 runs x {kb-on, kb-off} + baseline gate
+npm run eval:smoke      # 3 tasks x 1 run x both variants (fast sanity)
+npm run eval:replay     # Layer A gate: recorded traces, no model (~4 s)
 
 # useful flags
 npm run eval -- --tasks happy-path,double-settle-rejection --runs 5
 npm run eval -- --variant on --model <id> --base <url>
-npm run eval:smoke -- --min-pass 2   # exit 1 if any variant passes < 2 tasks
+npm run eval -- --min-pass 2   # override the baseline: exit 1 if any variant < 2
 ```
 
 Example against the LAN llama.cpp server (Qwen3.8-27B Q4_K_M, the model in
@@ -38,6 +39,12 @@ npm run eval:smoke -- --base http://<your-lan-gpu-box>:8080/v1 --model qwen3 --k
 
 Preflight checks: backend binaries built, model server reachable at
 `EVAL_API_BASE` (`GET /models`), model id in the server's list (warning only).
+
+After the run, the per-model baseline in `harness/src/eval/baseline.json`
+gates the result (a variant below its committed min pass exits non-zero);
+smoke runs are recorded but not gated, since the baseline covers the full
+task set. The report JSON and table both include a `regression gate`
+section.
 
 ## What a run does
 
@@ -151,10 +158,45 @@ model (the report's `cost (usd)` column is 0.0000 from the committed price
 table in `src/eval/pricing.ts`); for hosted providers that column is what
 you bill against, and an unpriced model reports `n/a` rather than a guess.
 
-## CI (roadmap R2)
+## Regression gate (R2)
 
-Today the eval is a local command. The planned gate has two layers
-(`docs/plans/roadmap.md` §3): a **deterministic recorded-trace replay** in
-`npm run verify` (catches tool/KB/error-message regressions with no model),
-and a **scheduled/secret-optional real-model job** running `eval:smoke` with
-`--min-pass` as the threshold.
+Two layers, so the agent surface has CI coverage with and without a model:
+
+### Layer A — recorded-trace replay (deterministic, every push)
+
+`npm run eval:replay` (step 8 of `npm run verify`, ~4 s, no LLM) replays the
+committed traces in `harness/src/eval/traces/` against the live MCP server
+and asserts *properties* of each result rather than pinning full text:
+
+| trace | source | what it pins |
+|---|---|---|
+| `happy-path-kb-on` | recorded from the 2026-10-13 run (16 calls) | the README demo task end-to-end; `get_message_schema` **carries KB notes** |
+| `gateway-forward-kb-on` | recorded from the 2026-10-13 run (13 calls) | the KB-sensitive task; `kb_search` finds the forward behavior |
+| `double-settle-kb-off` | recorded from the 2026-10-13 run (15 calls) | schema-only mode: `get_message_schema` has **no** `notes`; suite still runs green |
+| `validation-errors-kb-on` | synthetic (3 calls, all must fail) | the error-as-steering surface: unknown message, unsafe suite name, non-SELECT dbAssert |
+
+A trace fails on any of: an expected-ok call erroring, an expected-error
+call succeeding, a missing/extra substring in a result, or the KB on/off
+tool set switching incorrectly. It catches the failure classes that would
+silently break a real agent — tool renames, schema/arg changes, KB content
+regressions, error-message wording changes — before a model run could show
+them. To add a trace: capture `trace[]` from a real eval report JSON (or
+write the JSON by hand), assert substrings, list created suites in `cleanup`.
+
+### Layer B — real-model job with baseline (opt-in, secrets)
+
+`npm run eval` (full run) applies a per-model regression gate:
+`harness/src/eval/baseline.json` commits, per model, the min pass count per
+variant. A variant regressing below its baseline exits non-zero and the
+report's `gate` section says why. The gate is scale-aware: it only compares
+when the run covers the same task count as the baseline, so smoke runs are
+recorded but not gated. `--min-pass N` overrides the baseline for one run.
+
+`.github/workflows/eval.yml` runs the full eval (11 tasks × 3 runs × both
+variants) on a schedule (Mondays 04:00 UTC), on demand
+(workflow_dispatch), and on pushes to `main` that touch the agent surface
+(eval code, MCP server, knowledge base, protocol schema). It is **off by
+default**: it activates when the repository variable `EVAL_RUN_EVAL` is
+`true` and the secrets `EVAL_API_BASE` / `EVAL_API_MODEL` / `EVAL_API_KEY`
+are set. After an intentional improvement, re-run the full eval and update
+the baseline with the new source note.

@@ -1,0 +1,374 @@
+{
+  "id": "double-settle-kb-off",
+  "source": "recorded from eval run 2026-10-13 (Qwen3.8-27B, temp 0): kb-off double-settle-rejection run #1 \u2014 schema-only mode",
+  "noKb": true,
+  "calls": [
+    {
+      "tool": "db_schema",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "contains": [
+          "CREATE TABLE accounts",
+          "RESERVE"
+        ]
+      }
+    },
+    {
+      "tool": "list_messages",
+      "args": {
+        "process": "pay-orders"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "CreatePayment",
+          "CancelPayment"
+        ]
+      }
+    },
+    {
+      "tool": "list_messages",
+      "args": {
+        "process": "ledger"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "TransferFunds",
+          "ReverseTransfer"
+        ]
+      }
+    },
+    {
+      "tool": "list_messages",
+      "args": {
+        "process": "auth-gateway"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "Authorize",
+          "Settle"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "pay-orders",
+        "message": "CreatePayment"
+      },
+      "expect": {
+        "ok": true,
+        "notContains": [
+          "notes"
+        ],
+        "contains": [
+          "CreatePayment"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "pay-orders",
+        "message": "CompletePayment"
+      },
+      "expect": {
+        "ok": true,
+        "notContains": [
+          "notes"
+        ],
+        "contains": [
+          "CompletePayment"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "pay-orders",
+        "message": "PaymentAck"
+      },
+      "expect": {
+        "ok": true,
+        "notContains": [
+          "notes"
+        ],
+        "contains": [
+          "PaymentAck"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "auth-gateway",
+        "message": "Settle"
+      },
+      "expect": {
+        "ok": true,
+        "notContains": [
+          "notes"
+        ],
+        "contains": [
+          "Settle"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "auth-gateway",
+        "message": "SettleAck"
+      },
+      "expect": {
+        "ok": true,
+        "notContains": [
+          "notes"
+        ],
+        "contains": [
+          "SettleAck"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "ledger",
+        "message": "TransferFunds"
+      },
+      "expect": {
+        "ok": true,
+        "notContains": [
+          "notes"
+        ],
+        "contains": [
+          "TransferFunds"
+        ]
+      }
+    },
+    {
+      "tool": "list_suites",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "contains": [
+          "payment-happy-path"
+        ]
+      }
+    },
+    {
+      "tool": "get_suite",
+      "args": {
+        "name": "payment-happy-path"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "payment-happy-path"
+        ]
+      }
+    },
+    {
+      "tool": "get_suite",
+      "args": {
+        "name": "no-double-settle"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "no-double-settle"
+        ]
+      }
+    },
+    {
+      "tool": "create_suite",
+      "args": {
+        "name": "eval-double-settle-rejection",
+        "steps": [
+          {
+            "id": "create",
+            "send": {
+              "to": "pay-orders",
+              "msg": "CreatePayment",
+              "fields": {
+                "txn_id": 3001,
+                "account": "ACCT-001",
+                "amount_cents": 50000,
+                "currency": "USD"
+              }
+            },
+            "expectAck": {
+              "status": 0
+            }
+          },
+          {
+            "id": "transfer",
+            "send": {
+              "to": "ledger",
+              "msg": "TransferFunds",
+              "fields": {
+                "txn_id": 3001,
+                "from_acct": "ACCT-001",
+                "to_acct": "ACCT-002",
+                "amount_cents": 50000
+              }
+            },
+            "expectAck": {
+              "status": 0,
+              "from_balance_after": 450000
+            }
+          },
+          {
+            "id": "authorize",
+            "send": {
+              "to": "auth-gateway",
+              "msg": "Authorize",
+              "fields": {
+                "txn_id": 3001,
+                "amount_cents": 50000
+              }
+            },
+            "expectAck": {
+              "approved": 1,
+              "auth_code": "AU-0003001"
+            }
+          },
+          {
+            "id": "wait-complete",
+            "delayMs": 300
+          },
+          {
+            "id": "assert-complete",
+            "dbAssert": {
+              "sql": "SELECT status FROM payments WHERE txn_id = ?",
+              "params": [
+                3001
+              ],
+              "expect": {
+                "status": "complete"
+              }
+            }
+          },
+          {
+            "id": "settle-first",
+            "send": {
+              "to": "auth-gateway",
+              "msg": "Settle",
+              "fields": {
+                "txn_id": 3001,
+                "fee_cents": 2500
+              }
+            },
+            "expectAck": {
+              "status": 0,
+              "settled_cents": 50000
+            }
+          },
+          {
+            "id": "wait-settle",
+            "delayMs": 300
+          },
+          {
+            "id": "assert-settled",
+            "dbAssert": {
+              "sql": "SELECT status FROM payments WHERE txn_id = ?",
+              "params": [
+                3001
+              ],
+              "expect": {
+                "status": "settled"
+              }
+            }
+          },
+          {
+            "id": "assert-reserve-after-first",
+            "dbAssert": {
+              "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+              "params": [
+                "RESERVE"
+              ],
+              "expect": {
+                "balance_cents": 1050000
+              }
+            }
+          },
+          {
+            "id": "settle-second",
+            "send": {
+              "to": "auth-gateway",
+              "msg": "Settle",
+              "fields": {
+                "txn_id": 3001,
+                "fee_cents": 2500
+              }
+            },
+            "expectAck": {
+              "status": 2
+            }
+          },
+          {
+            "id": "assert-still-settled",
+            "dbAssert": {
+              "sql": "SELECT status FROM payments WHERE txn_id = ?",
+              "params": [
+                3001
+              ],
+              "expect": {
+                "status": "settled"
+              }
+            }
+          },
+          {
+            "id": "assert-reserve-unchanged",
+            "dbAssert": {
+              "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+              "params": [
+                "RESERVE"
+              ],
+              "expect": {
+                "balance_cents": 1050000
+              }
+            }
+          },
+          {
+            "id": "assert-no-extra-postings",
+            "dbAssert": {
+              "sql": "SELECT COUNT(*) AS n FROM ledger_entries WHERE txn_id = ? AND status = 'applied'",
+              "params": [
+                3001
+              ],
+              "expect": {
+                "n": 2
+              }
+            }
+          }
+        ],
+        "description": "A payment can only be settled once: create+transfer+authorize a 50000-cent payment on ACCT-001, settle it (RESERVE +50000), then attempt a second Settle which must be rejected (ack status 2) with no extra money moving into RESERVE and no extra applied ledger postings."
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "created"
+        ]
+      }
+    },
+    {
+      "tool": "run_suite",
+      "args": {
+        "name": "eval-double-settle-rejection"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "\"ok\": true"
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    "eval-double-settle-rejection"
+  ]
+}

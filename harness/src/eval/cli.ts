@@ -28,7 +28,7 @@ import { SMOKE_TASK_IDS, TASKS, taskById } from "./tasks";
 import { runEval } from "./runner";
 import type { EvalRuntime } from "./runner";
 import { toMarkdown, writeReport } from "./report";
-import type { EvalConfig, Variant } from "./types";
+import type { EvalConfig, EvalReport, Variant } from "./types";
 
 interface Flags {
   smoke: boolean;
@@ -177,9 +177,6 @@ async function main(): Promise<void> {
     tasks,
   };
   const report = await runEval(rt);
-  const { json, md } = writeReport(report, config.outDir);
-  console.log("\n" + toMarkdown(report));
-  console.log(`[eval] report: ${json}\n[eval] table:  ${md}`);
 
   // Repo hygiene: the eval must never leave the committed suites modified.
   // The agent is told to name its suite eval-*; if it still touched a
@@ -194,19 +191,100 @@ ${dirty}`);
   } catch {
     // not a git checkout / git unavailable — nothing to check
   }
-  const minPass = f.minPass;
-  if (minPass !== null) {
-    const bad = report.summary.filter((s) => s.pass < minPass);
-    if (bad.length > 0) {
-      console.error(`[eval] FAIL: below --min-pass ${minPass}: ${bad.map((s) => `${s.variant}=${s.pass}`).join(", ")}`);
-      process.exitCode = 1;
-    } else {
-      console.log(`[eval] gate: all variants >= ${f.minPass} — PASS`);
-    }
+  const gate = applyGate(report, resolveMinPass(config.model, f.minPass));
+  const { json, md } = writeReport(report, config.outDir);
+  console.log("\n" + toMarkdown(report));
+  console.log(`[eval] report: ${json}\n[eval] table:  ${md}`);
+  if (gate.failed.length > 0) {
+    for (const m of gate.failed) console.error(`[eval] FAIL: ${m}`);
+    process.exitCode = 1;
+  } else if (Object.keys(gate.minPass).length > 0) {
+    console.log(`[eval] gate: no regressions vs baseline (${gate.source})`);
+  } else {
+    console.log(`[eval] gate: no baseline for this model — recorded, not gated (${gate.source})`);
   }
 }
 
-main().catch((e) => {
-  console.error(`[eval] error: ${e instanceof Error ? e.message : String(e)}`);
-  process.exitCode = 1;
-});
+/* ------------------------------------------------------------------ */
+/* Regression gate (roadmap R2, Layer B)                               */
+/* ------------------------------------------------------------------ */
+
+interface BaselineEntry {
+  pass: number;
+  total: number;
+}
+
+interface BaselineFile {
+  note?: string;
+  models: Record<string, { source?: string; kb?: BaselineEntry; no_kb?: BaselineEntry }>;
+}
+
+const VARIANT_BASELINE_KEY: Record<Variant, "kb" | "no_kb"> = { "kb-on": "kb", "kb-off": "no_kb" };
+
+/** Min pass per variant: --min-pass override wins; otherwise the committed
+ *  baseline for this model (src/eval/baseline.json). */
+export function resolveMinPass(
+  model: string,
+  override: number | null,
+): { minPass: Partial<Record<Variant, number>>; totals: Partial<Record<Variant, number>>; source: string } {
+  if (override !== null) {
+    return { minPass: { "kb-on": override, "kb-off": override }, totals: {}, source: "--min-pass override" };
+  }
+  const file = path.join(packageRoot(), "src", "eval", "baseline.json");
+  if (!fs.existsSync(file)) return { minPass: {}, totals: {}, source: "no baseline.json" };
+  const data = JSON.parse(fs.readFileSync(file, "utf8")) as BaselineFile;
+  const entry = data.models[model];
+  if (!entry) return { minPass: {}, totals: {}, source: `no baseline for model "${model}"` };
+  const minPass: Partial<Record<Variant, number>> = {};
+  const totals: Partial<Record<Variant, number>> = {};
+  for (const v of ["kb-on", "kb-off"] as Variant[]) {
+    const e = entry[VARIANT_BASELINE_KEY[v]];
+    if (e) {
+      minPass[v] = e.pass;
+      totals[v] = e.total;
+    }
+  }
+  return { minPass, totals, source: entry.source ?? `baseline for ${model}` };
+}
+
+/** Evaluate the gate and attach it to the report (mutates + returns).
+ *  A variant is only gated when the baseline is comparable (same task
+ *  count) — a smoke run (3 tasks) must not be judged against the full-11
+ *  baseline. */
+export function applyGate(
+  report: EvalReport,
+  r: { minPass: Partial<Record<Variant, number>>; totals: Partial<Record<Variant, number>>; source: string },
+): NonNullable<EvalReport["gate"]> & { source: string } {
+  const failed: string[] = [];
+  const skipped: string[] = [];
+  for (const s of report.summary) {
+    const mp = r.minPass[s.variant];
+    if (mp === undefined) {
+      skipped.push(`${s.variant}: no baseline`);
+      continue;
+    }
+    const total = r.totals[s.variant];
+    if (total !== undefined && total !== s.runs) {
+      skipped.push(`${s.variant}: baseline covers ${total} runs, this run has ${s.runs} (different task set)`);
+      continue;
+    }
+    if (s.pass < mp) failed.push(`${s.variant}: ${s.pass}/${s.runs} below baseline ${mp} (${r.source})`);
+  }
+  const gate: NonNullable<EvalReport["gate"]> & { source: string } = {
+    minPass: r.minPass,
+    failed,
+    skipped,
+    source: r.source,
+  };
+  report.gate = gate;
+  return gate;
+}
+
+/* Standalone entry: npm run eval / eval:smoke (guarded so this module is
+ * importable for tests without firing the whole experiment). */
+if (process.argv[1] && process.argv[1].endsWith("cli.ts")) {
+  main().catch((e) => {
+    console.error(`[eval] error: ${e instanceof Error ? e.message : String(e)}`);
+    process.exitCode = 1;
+  });
+}

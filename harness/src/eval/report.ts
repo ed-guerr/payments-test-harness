@@ -79,6 +79,20 @@ export function toMarkdown(report: EvalReport): string {
       out.push(`| ${row.taskId} | ${row.kbSensitive ? "yes" : ""} | ${row.pass}/${row.of} | ${avgCalls} | ${wall} |`);
     }
   }
+  if (report.gate) {
+    out.push("");
+    out.push("## regression gate");
+    out.push("");
+    for (const s of report.summary) {
+      const mp = report.gate.minPass[s.variant];
+      out.push(`- ${s.variant}: ${mp === undefined ? "no baseline (not gated)" : `min pass ${mp}`} — got ${s.pass}/${s.runs}`);
+    }
+    for (const m of report.gate.skipped) out.push(`- skipped: ${m}`);
+    for (const m of report.gate.failed) out.push(`- **FAIL**: ${m}`);
+    if (report.gate.failed.length === 0 && Object.keys(report.gate.minPass).length > 0) {
+      out.push("- PASS: no regressions vs baseline");
+    }
+  }
   out.push("");
   out.push("pass = agent created the suite AND it runs green (independent re-run) AND the full ground-truth checklist is satisfied.");
   return out.join("\n") + "\n";

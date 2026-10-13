@@ -1,0 +1,10 @@
+{
+  "note": "Per-model regression baselines for `npm run eval` (roadmap R2, Layer B). The eval CLI reads the min pass for the running model and fails the run if a variant regresses below it. After an intentional improvement (better prompt, richer KB, more tasks), re-run the full eval and update these numbers with the new source note.",
+  "models": {
+    "qwen3": {
+      "source": "full eval run 2026-10-13 — Qwen3.8-27B Q4_K_M via llama.cpp, temp 0, 3 runs/task, thinking off",
+      "kb": { "pass": 33, "total": 33 },
+      "no_kb": { "pass": 32, "total": 33 }
+    }
+  }
+}

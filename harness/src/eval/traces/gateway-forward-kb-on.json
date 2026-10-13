@@ -1,0 +1,239 @@
+{
+  "id": "gateway-forward-kb-on",
+  "source": "recorded from eval run 2026-10-13 (Qwen3.8-27B, temp 0): kb-on gateway-forward-completes run #1 \u2014 the KB-sensitive task",
+  "noKb": false,
+  "calls": [
+    {
+      "tool": "db_schema",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "contains": [
+          "CREATE TABLE accounts",
+          "RESERVE"
+        ]
+      }
+    },
+    {
+      "tool": "list_processes",
+      "args": {},
+      "expect": {
+        "ok": true,
+        "contains": [
+          "pay-orders",
+          "ledger",
+          "auth-gateway"
+        ]
+      }
+    },
+    {
+      "tool": "list_messages",
+      "args": {
+        "process": "auth-gateway"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "Authorize",
+          "Settle"
+        ]
+      }
+    },
+    {
+      "tool": "list_messages",
+      "args": {
+        "process": "pay-orders"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "CreatePayment",
+          "CancelPayment"
+        ]
+      }
+    },
+    {
+      "tool": "list_messages",
+      "args": {
+        "process": "ledger"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "TransferFunds",
+          "ReverseTransfer"
+        ]
+      }
+    },
+    {
+      "tool": "kb_search",
+      "args": {
+        "query": "external authorization completes payment auth-gateway Authorize forward pay-orders CompletePayment"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "knowledge/backend/"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "auth-gateway",
+        "message": "Authorize"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "Authorize",
+          "notes"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "pay-orders",
+        "message": "CreatePayment"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "CreatePayment",
+          "notes"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "pay-orders",
+        "message": "CompletePayment"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "CompletePayment",
+          "notes"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "auth-gateway",
+        "message": "AuthResponse"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "AuthResponse",
+          "notes"
+        ]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": {
+        "process": "pay-orders",
+        "message": "PaymentAck"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "PaymentAck",
+          "notes"
+        ]
+      }
+    },
+    {
+      "tool": "create_suite",
+      "args": {
+        "name": "eval-gateway-forward-completes",
+        "steps": [
+          {
+            "id": "create-payment",
+            "send": {
+              "to": "pay-orders",
+              "msg": "CreatePayment",
+              "fields": {
+                "txn_id": 1001,
+                "account": "ACCT-001",
+                "amount_cents": 2500,
+                "currency": "USD"
+              }
+            },
+            "expectAck": {
+              "status": 0
+            }
+          },
+          {
+            "id": "payment-open",
+            "dbAssert": {
+              "sql": "SELECT status FROM payments WHERE txn_id = ?",
+              "params": [
+                1001
+              ],
+              "expect": {
+                "status": "open"
+              }
+            }
+          },
+          {
+            "id": "authorize",
+            "send": {
+              "to": "auth-gateway",
+              "msg": "Authorize",
+              "fields": {
+                "txn_id": 1001,
+                "amount_cents": 2500
+              }
+            },
+            "expectAck": {
+              "approved": 1
+            }
+          },
+          {
+            "id": "wait-forward",
+            "delayMs": 500
+          },
+          {
+            "id": "payment-complete",
+            "dbAssert": {
+              "sql": "SELECT status FROM payments WHERE txn_id = ?",
+              "params": [
+                1001
+              ],
+              "expect": {
+                "status": "complete"
+              }
+            }
+          }
+        ],
+        "description": "Verify that an approved external authorization (auth-gateway Authorize) forwards CompletePayment to pay-orders and the payment row transitions open -> complete."
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "created"
+        ]
+      }
+    },
+    {
+      "tool": "run_suite",
+      "args": {
+        "name": "eval-gateway-forward-completes"
+      },
+      "expect": {
+        "ok": true,
+        "contains": [
+          "\"ok\": true"
+        ]
+      }
+    }
+  ],
+  "cleanup": [
+    "eval-gateway-forward-completes"
+  ]
+}
