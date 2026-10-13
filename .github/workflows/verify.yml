@@ -1,4 +1,4 @@
-# CI for the whole stack — two jobs:
+# CI for the whole stack — three jobs:
 #
 #   verify  the exact one-command check developers run locally
 #           (harness: `npm run verify`): C build with -Werror, ASan+UBSan
@@ -8,7 +8,11 @@
 #   e2e     drives the real Electron window through the actual preload
 #           bridge (HARNESS_SELF_TEST=1: listSuites + runSuite over IPC).
 #
-# Both jobs must be green for a push/PR to main.
+#   docker  builds the headless image (multi-stage: gcc C build, npm ci,
+#           registry-staleness diff) and proves it runs: one suite green +
+#           the recorded-trace replay gate. Also the "C builds with gcc" job.
+#
+# All jobs must be green for a push/PR to main.
 name: verify
 
 on:
@@ -100,3 +104,23 @@ jobs:
       - name: xvfb-run npm run test:e2e
         working-directory: harness
         run: xvfb-run -a npm run test:e2e
+
+  docker:
+    name: docker image (build + headless run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # Multi-stage: gcc -Werror C build, npm ci (electron binary skipped),
+      # registry.json staleness diff, slim runtime stage.
+      - name: Build image
+        run: docker build -t payments-harness:ci .
+
+      # The image's default command: one suite green on a fresh cluster.
+      - name: One suite green in the image
+        run: docker run --rm payments-harness:ci
+
+      # The deterministic agent-surface gate, fully offline.
+      - name: Recorded-trace replay in the image
+        run: docker run --rm payments-harness:ci eval:replay

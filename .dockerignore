@@ -1,0 +1,22 @@
+.git
+.DS_Store
+*.log
+
+# stale host build output — the image builds its own
+backend/build/
+backend/build-asan/
+
+# host node_modules + local run artifacts
+harness/node_modules/
+harness/data/
+harness/runs/
+docs/test-runs/
+
+# full-fidelity eval reports (samples are not needed in the image)
+harness/eval-reports/
+
+# the demo GIF is a README asset, not a runtime dependency
+docs/demo.gif
+
+# local planning docs
+docs/to-do/

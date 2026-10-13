@@ -98,18 +98,34 @@ HARNESS_SELF_TEST=1 npm start   # headless e2e self-test (drives the real UI)
 
 ## CI
 
-GitHub Actions (`.github/workflows/verify.yml`) runs two jobs on every push/PR
-to `main`:
+GitHub Actions (`.github/workflows/verify.yml`) runs three jobs on every
+push/PR to `main`, plus the opt-in `eval` job in `eval.yml`:
 
 | Job | What it runs |
 |---|---|
 | `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, `node:test` unit tests (codec round-trip, ack matching, KB search, suite validation, hostile-suite cases, read-only db), live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), recorded-trace replay of the agent surface (no LLM), KB staleness check. Run reports are uploaded as an artifact. |
 | `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
-| `eval` (opt-in) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist (`.github/workflows/eval.yml`) — on a schedule, on demand, and on pushes touching the agent surface. |
+| `docker` | builds the headless image (gcc C build, `npm ci`, registry-staleness diff) on Linux and proves it runs: one suite green + `eval:replay` inside the image. Also the "C builds with gcc" job. |
+| `eval` (opt-in, `eval.yml`) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist — on a schedule, on demand, and on pushes touching the agent surface. |
 
 The harness is unit-tested with the built-in `node:test` runner (`npm run
 test:unit`, 23 tests, no test framework added — the repo's npm policy blocks
 install scripts by default).
+
+## Docker
+
+Headless image (the Electron GUI is deliberately absent — demo surface,
+not product; a stale `registry.json` fails the build):
+
+```bash
+docker build -t payments-harness .
+docker run --rm payments-harness run:cli -- suites/payment-happy-path.json   # one suite, fresh cluster + db
+docker run -i --rm payments-harness mcp                                      # MCP server over stdio
+```
+
+The CI `docker` job (Linux) builds it and proves one suite + the
+replay gate green inside. What's in/out and MCP client config:
+[`docker/README.md`](docker/README.md).
 
 ## Benchmark
 
@@ -301,6 +317,9 @@ Risks / Inter-process interactions). Consumers:
 ## Repo map
 
 ```
+Dockerfile          headless image (no Electron; registry-staleness diff at build)
+.dockerignore
+docker/README.md    what's in/out, run + MCP client config, eval in-container
 backend/
   include/pay/        envelope, X-macro message defs, dispatch table, db, socket
   src/common/         codec, TCP server + dispatch, introspection, sqlite, log
