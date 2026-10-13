@@ -52,6 +52,14 @@ export interface StepResult {
   received?: unknown;
 }
 
+/** Per-step timing, relative to the suite start (steps run sequentially). */
+export interface StepTiming {
+  /** ms from suite start when the step began */
+  startedAtMs: number;
+  /** how long the step took, including any delayMs sleep */
+  durationMs: number;
+}
+
 export interface SuiteResult {
   suite: string;
   ok: boolean;
@@ -62,7 +70,7 @@ export interface SuiteResult {
 
 export type RunnerEvent =
   | { type: "suite-start"; suite: string }
-  | (StepResult & { type: "step-result" })
+  | ((StepResult & StepTiming) & { type: "step-result" })
   | (SuiteResult & { type: "suite-result" })
   | { type: "done"; results: SuiteResult[] };
 
@@ -84,11 +92,13 @@ export class Runner {
   async runSuite(suite: Suite): Promise<SuiteResult> {
     const t0 = Date.now();
     this.emit({ type: "suite-start", suite: suite.name });
-    const steps: StepResult[] = [];
+    const steps: (StepResult & StepTiming)[] = [];
     let passed = 0;
     let failed = 0;
     for (const step of suite.steps) {
-      const r = await this.runStep(suite.name, step);
+      const startedAtMs = Date.now() - t0;
+      const base = await this.runStep(suite.name, step);
+      const r: StepResult & StepTiming = { ...base, startedAtMs, durationMs: Date.now() - t0 - startedAtMs };
       steps.push(r);
       this.emit({ type: "step-result", ...r });
       if (r.ok) passed++;
@@ -106,7 +116,7 @@ export class Runner {
     return result;
   }
 
-  private persistRun(result: SuiteResult, steps: StepResult[]): void {
+  private persistRun(result: SuiteResult, steps: (StepResult & StepTiming)[]): void {
     if (!this.opts.runsDir) return;
     try {
       fs.mkdirSync(this.opts.runsDir, { recursive: true });

@@ -1,6 +1,6 @@
 # harness/src/renderer — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:35:36.226Z · kb-forge 0.2 · source sha256:cb69ea9de225
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:55:30.718Z · kb-forge 0.2 · source sha256:8d9ed3b19a67
 
 ## Purpose
 
@@ -18,7 +18,7 @@ React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step
 | /pages/DbPage.tsx | 117 |
 | /pages/RegistryPage.tsx | 74 |
 | /pages/SuiteListPage.tsx | 67 |
-| /pages/SuitePage.tsx | 267 |
+| /pages/SuitePage.tsx | 353 |
 | store.ts | 81 |
 
 ## Domain vocabulary
@@ -40,12 +40,13 @@ React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step
 | `RegistryPage` | pages/RegistryPage.tsx:13 |
 | `SuiteListPage` | pages/SuiteListPage.tsx:4 |
 | `SuitePage` | pages/SuitePage.tsx:8 |
-| `StepBadge({ r, running }: { r?: StepResult; running: boolean })` | pages/SuitePage.tsx:127 |
-| `describeStep(step: Step)` | pages/SuitePage.tsx:138 |
-| `StepDetails({ step, result }: { step: Step; result?: StepResult })` | pages/SuitePage.tsx:146 |
-| `StepDefinition({ step }: { step: Step })` | pages/SuitePage.tsx:173 |
-| `KVGrid({ rows, label }: { rows: KVPair[]; label?: string })` | pages/SuitePage.tsx:216 |
-| `KVRow({ k, v }: { k: string; v: string \| number \| (string \| number \| null)` | pages/SuitePage.tsx:264 |
+| `StepBadge({ r, running }: { r?: StepResult; running: boolean })` | pages/SuitePage.tsx:133 |
+| `fmtMs(ms: number)` | pages/SuitePage.tsx:220 |
+| `describeStep(step: Step)` | pages/SuitePage.tsx:224 |
+| `StepDetails({ step, result }: { step: Step; result?: StepResult })` | pages/SuitePage.tsx:232 |
+| `StepDefinition({ step }: { step: Step })` | pages/SuitePage.tsx:259 |
+| `KVGrid({ rows, label }: { rows: KVPair[]; label?: string })` | pages/SuitePage.tsx:302 |
+| `KVRow({ k, v }: { k: string; v: string \| number \| (string \| number \| null)` | pages/SuitePage.tsx:350 |
 
 ## Common modification points
 

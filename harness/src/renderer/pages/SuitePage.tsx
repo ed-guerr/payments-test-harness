@@ -40,6 +40,8 @@ export function SuitePage(): JSX.Element {
         <h2 className="text-lg font-mono text-accent">{suite.name}</h2>
         <p className="text-xs text-muted mb-4">{suite.description}</p>
 
+        <StepTimeline suite={suite} results={results} onToggle={toggleStep} />
+
         <div className="border border-edge rounded overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-panel text-muted">
@@ -49,6 +51,7 @@ export function SuitePage(): JSX.Element {
                 <th className="text-left px-3 py-2 w-40">step</th>
                 <th className="text-left px-3 py-2">action</th>
                 <th className="text-left px-3 py-2">detail</th>
+                <th className="text-right px-3 py-2 w-16">time</th>
               </tr>
             </thead>
             <tbody>
@@ -80,10 +83,13 @@ export function SuitePage(): JSX.Element {
                       <td className="px-3 py-2 font-mono text-dim">{step.id}</td>
                       <td className="px-3 py-2 font-mono text-dim">{describeStep(step)}</td>
                       <td className="px-3 py-2 text-muted break-all">{r?.detail ?? "—"}</td>
+                      <td className="px-3 py-2 text-right font-mono text-dim whitespace-nowrap">
+                        {r?.durationMs !== undefined ? fmtMs(r.durationMs) : "—"}
+                      </td>
                     </tr>
                     {isOpen && (
                       <tr className="border-t border-edge bg-ink">
-                        <td colSpan={5} className="px-4 py-3">
+                        <td colSpan={6} className="px-4 py-3">
                           <StepDetails step={step} result={r} />
                         </td>
                       </tr>
@@ -133,6 +139,86 @@ function StepBadge({ r, running }: { r?: StepResult; running: boolean }): JSX.El
   return (
     <span className={`text-xs font-mono ${r.ok ? "text-pass" : "text-fail"}`}>{r.ok ? "✓" : "✗"}</span>
   );
+}
+
+/**
+ * Per-step waterfall: one bar per step, offset by start time and sized by
+ * duration, scaled to the suite total. Delay steps render dim (intentional
+ * wait); failures render red. Clicking a row toggles the matching table row.
+ * Hidden until a run has produced step timing.
+ */
+function StepTimeline({
+  suite,
+  results,
+  onToggle,
+}: {
+  suite: Suite;
+  results: Record<string, StepResult>;
+  onToggle: (id: string) => void;
+}): JSX.Element | null {
+  const [open, setOpen] = useState(true);
+  const timed = suite.steps
+    .map((step) => ({ step, r: results[step.id] }))
+    .filter(
+      (x): x is { step: Step; r: StepResult & { startedAtMs: number; durationMs: number } } =>
+        x.r?.startedAtMs !== undefined && x.r?.durationMs !== undefined,
+    );
+  if (timed.length === 0) return null;
+  const total = Math.max(1, ...timed.map(({ r }) => r.startedAtMs + r.durationMs));
+  const toggle = (): void => setOpen((v) => !v);
+  return (
+    <div className="mt-3 border border-edge rounded bg-panel">
+      <div
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        className="px-3 py-2 text-xs font-semibold text-muted border-b border-edge flex items-center justify-between cursor-pointer focus:outline-none focus:bg-edge/40 hover:bg-edge/30"
+      >
+        <span>
+          <span className="inline-block w-4 select-none">{open ? "▾" : "▸"}</span> timeline
+        </span>
+        <span className="font-mono font-normal">{total} ms total</span>
+      </div>
+      {open && <div className="p-3 space-y-[3px]">
+        {timed.map(({ step, r }) => {
+          const color = !r.ok ? "bg-fail" : "delayMs" in step ? "bg-edge" : "bg-accent/70";
+          const width = Math.max((r.durationMs / total) * 100, 0.6);
+          return (
+            <div
+              key={step.id}
+              onClick={() => onToggle(step.id)}
+              title={`${step.id}: ${r.durationMs} ms, starts at ${r.startedAtMs} ms`}
+              className="flex items-center gap-2 cursor-pointer group"
+            >
+              <span className="w-44 shrink-0 font-mono text-[10px] text-dim group-hover:text-fg truncate">
+                {step.id}
+              </span>
+              <div className="relative flex-1 h-3 bg-ink rounded-sm">
+                <div
+                  className={`absolute top-0 h-full rounded-sm ${color}`}
+                  style={{ left: `${(r.startedAtMs / total) * 100}%`, width: `${width}%` }}
+                />
+              </div>
+              <span className="w-14 shrink-0 text-right font-mono text-[10px] text-muted whitespace-nowrap">
+                {fmtMs(r.durationMs)}
+              </span>
+            </div>
+          );
+        })}
+      </div>}
+    </div>
+  );
+}
+
+function fmtMs(ms: number): string {
+  return ms < 1 ? "<1 ms" : `${Math.round(ms)} ms`;
 }
 
 function describeStep(step: Step): string {

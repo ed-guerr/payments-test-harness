@@ -40,7 +40,7 @@ function printEvent(e: RunnerEvent, json: boolean): void {
       console.log(`\n=== ${e.suite} ===`);
       break;
     case "step-result":
-      console.log(`  ${e.ok ? "PASS" : "FAIL"}  ${e.stepId}  ${e.detail}`);
+      console.log(`  ${e.ok ? "PASS" : "FAIL"}  ${e.stepId}  (${Math.round(e.durationMs)} ms)  ${e.detail}`);
       break;
     case "suite-result":
       console.log(`  ${e.ok ? "✓" : "✗"} ${e.suite}: ${e.passed} passed, ${e.failed} failed (${e.durationMs} ms)`);

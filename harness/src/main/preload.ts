@@ -16,6 +16,9 @@ export interface StepResult {
   ok: boolean;
   detail: string;
   received?: unknown;
+  /** Per-step timing, relative to suite start (set by the runner). */
+  startedAtMs?: number;
+  durationMs?: number;
 }
 
 export interface SuiteResult {
