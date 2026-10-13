@@ -320,6 +320,9 @@ knowledge/            generated intern guides (+ INDEX.md + .manifest.json)
 docs/
   plans/InitialDesign.md    the full design plan (phases P1–P6)
   conventions/conventions.md the project's conventions & gates
+  agent.md            tool & agent design (why the MCP surface is shaped this way)
+  security.md         threat model for agent-authored SQL / killProcess / MCP
+  eval.md             the KB on/off evaluation methodology (npm run eval)
   protocol.md · mcp.md · knowledge.md
   designs/          sample designer output (KB-grounded vs schema-only pair)
   demo.gif          the ~51s half-speed demo (linked at the top of the
@@ -340,6 +343,13 @@ docs/
   design are in the repo — the project is demoable offline, with no API keys.
 - **Localhost only.** Everything binds 127.0.0.1; there is no network surface
   beyond 9101–9103 on loopback.
+- **The agent is the primary author, and the surface is designed for it** —
+  validation at authoring, structured errors as steering, deterministic KB
+  retrieval: [`docs/agent.md`](docs/agent.md).
+- **Hostile inputs are a test suite, not a fear** — agent-authored SQL and
+  process kills are contained in three layers (authoring validation,
+  read-only execution, disposable clusters) and every layer is tested:
+  [`docs/security.md`](docs/security.md).
 
 Conventions, gates, and commit policy: [`docs/conventions/conventions.md`](docs/conventions/conventions.md).
 
