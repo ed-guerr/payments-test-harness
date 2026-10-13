@@ -39,14 +39,26 @@ export function validateSuite(s: Suite): void {
   if (typeof s.name !== "string" || !Array.isArray(s.steps)) throw new Error("suite must have name + steps[]");
   s.steps.forEach((step, i) => {
     if (typeof step.id !== "string") throw new Error(`step ${i}: missing id`);
-    const kinds = ["send", "dbAssert", "delayMs"].filter((k) => k in step);
+    const kinds = ["send", "dbAssert", "delayMs", "killProcess"].filter((k) => k in step);
     if (kinds.length !== 1) {
-      throw new Error(`step ${i} (${step.id}): expected exactly one of send|dbAssert|delayMs`);
+      throw new Error(`step ${i} (${step.id}): expected exactly one of send|dbAssert|delayMs|killProcess`);
     }
     if ("send" in step) {
       const { to, msg, fields } = step.send;
       codec.findMessage(to, msg);
       codec.pack(to, msg, fields);
+      if (step.expectError !== undefined && typeof step.expectError !== "boolean") {
+        throw new Error(`step ${i} (${step.id}): expectError must be a boolean`);
+      }
+    }
+    if ("killProcess" in step) {
+      const { proc, signal } = step.killProcess;
+      if (!codec.listProcs().includes(proc)) {
+        throw new Error(`step ${i} (${step.id}): unknown process "${proc}" (known: ${codec.listProcs().join(", ")})`);
+      }
+      if (signal !== undefined && signal !== "SIGKILL" && signal !== "SIGTERM") {
+        throw new Error(`step ${i} (${step.id}): signal must be SIGKILL or SIGTERM`);
+      }
     }
   });
 }

@@ -57,7 +57,10 @@ function registerIpc(): void {
     const cluster = await BackendCluster.start(backendBuildDir(), path.join(DATA_DIR(), `${name}.db`), (proc, line) =>
       sendUi({ type: "backend-log", proc, line }),
     );
-    const runner = new Runner(cluster.conns, cluster.db, (e) => sendUi(e), { runsDir: RUNS_DIR() });
+    const runner = new Runner(cluster.conns, cluster.db, (e) => sendUi(e), {
+      runsDir: RUNS_DIR(),
+      killProcess: (p, s) => cluster.kill(p, s),
+    });
     try {
       return await runner.runSuite(suite);
     } finally {

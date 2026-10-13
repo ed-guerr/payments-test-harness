@@ -50,6 +50,13 @@ export class BackendCluster {
     }
   }
 
+  /** Chaos step: kill one backend process mid-run. False if not running. */
+  kill(proc: string, signal: NodeJS.Signals = "SIGKILL"): boolean {
+    const child = this.procs[proc];
+    if (!child) return false;
+    return child.kill(signal);
+  }
+
   async stop(): Promise<void> {
     for (const c of Object.values(this.conns)) c.close();
     this.conns = {};

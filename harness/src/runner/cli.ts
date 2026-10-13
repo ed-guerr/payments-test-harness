@@ -6,6 +6,7 @@
  * everything down. With --json it prints one JSON event per line on stdout
  * (backend logs go to stderr).
  */
+import fs from "node:fs";
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
 import { backendBuildDir, DATA_DIR, RUNS_DIR, SUITES_DIR } from "../backend/paths";
@@ -55,14 +56,25 @@ async function main(): Promise<number> {
   const suites: Suite[] =
     opts.targets.length === 0
       ? listSuites().map((m) => loadSuite(path.join(SUITES_DIR(), `${m.name}.json`)))
-      : opts.targets.map((t) => loadSuite(path.resolve(t)));
+      : opts.targets.flatMap((t) => {
+        const p = path.resolve(t);
+        return fs.statSync(p).isDirectory()
+          ? fs
+              .readdirSync(p)
+              .filter((f) => f.endsWith(".json"))
+              .map((f) => loadSuite(path.join(p, f)))
+          : [loadSuite(p)];
+      });
 
   const results: SuiteResult[] = [];
   for (const suite of suites) {
     const cluster = await BackendCluster.start(opts.binDir, path.join(DATA_DIR(), `${suite.name}.db`), (p, line) =>
       process.stderr.write(`[${p}] ${line}\n`),
     );
-    const runner = new Runner(cluster.conns, cluster.db, (e) => printEvent(e, opts.json), { runsDir: RUNS_DIR() });
+    const runner = new Runner(cluster.conns, cluster.db, (e) => printEvent(e, opts.json), {
+      runsDir: RUNS_DIR(),
+      killProcess: (p, s) => cluster.kill(p, s),
+    });
     try {
       results.push(await runner.runSuite(suite));
     } finally {

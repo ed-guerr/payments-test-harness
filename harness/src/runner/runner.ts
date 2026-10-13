@@ -8,6 +8,10 @@
  *   dbAssert  — SQL query against the backend's database; expect is a
  *               partial row match
  *   delayMs   — wait (covers async inter-process forwards)
+ *   killProcess — chaos: SIGKILL/SIGTERM a backend process mid-suite
+ *
+ * Send steps also support expectError: assert that the send fails
+ * (transport error or ErrorAck) — for testing failure modes.
  *
  * The runner is Electron-free: it emits JSON events through a callback, so
  * the CLI prints them and the Electron UI subscribes to the same events.
@@ -17,12 +21,14 @@ import path from "node:path";
 import { checkRow, Db } from "../db/db";
 import * as codec from "../protocol/codec";
 import type { Conn } from "../protocol/conn";
-import type { FieldValue } from "../protocol/types";
+import type { FieldValue, Frame } from "../protocol/types";
 
 export interface SendStep {
   id: string;
   send: { to: string; msg: string; fields: Record<string, FieldValue> };
   expectAck?: Record<string, FieldValue>;
+  /** When true, the step passes if the send fails (transport error or ErrorAck). */
+  expectError?: boolean;
   timeoutMs?: number;
 }
 
@@ -36,7 +42,12 @@ export interface DelayStep {
   delayMs: number;
 }
 
-export type Step = SendStep | DbAssertStep | DelayStep;
+export interface KillStep {
+  id: string;
+  killProcess: { proc: string; signal?: "SIGKILL" | "SIGTERM" };
+}
+
+export type Step = SendStep | DbAssertStep | DelayStep | KillStep;
 
 export interface Suite {
   name: string;
@@ -79,6 +90,8 @@ export const DEFAULT_TIMEOUT_MS = 2000;
 export interface RunnerOptions {
   /** When set, each finished run is persisted to <runsDir>/<suite>-<ts>.json. */
   runsDir?: string;
+  /** Chaos: kill a backend process mid-suite. True if a live process was killed. */
+  killProcess?: (proc: string, signal: NodeJS.Signals) => boolean;
 }
 
 export class Runner {
@@ -154,6 +167,7 @@ export class Runner {
         await sleep(step.delayMs);
         return { suite, stepId: step.id, ok: true, detail: `waited ${step.delayMs} ms` };
       }
+      if ("killProcess" in step) return this.doKill(suite, step);
       // Unreachable for a typed Step (validateSuite enforces exactly one
       // kind); kept as a runtime guard for malformed JSON.
       const id = (step as { id?: string }).id ?? "?";
@@ -163,35 +177,68 @@ export class Runner {
     }
   }
 
+  /** Chaos: kill a backend process mid-suite. The cluster owns the child
+   * processes; the runner only holds the injected capability. */
+  private doKill(suite: string, step: KillStep): StepResult {
+    const { proc, signal = "SIGKILL" } = step.killProcess;
+    if (!this.opts.killProcess) {
+      return { suite, stepId: step.id, ok: false, detail: "killProcess not supported in this context" };
+    }
+    const killed = this.opts.killProcess(proc, signal);
+    return {
+      suite,
+      stepId: step.id,
+      ok: killed,
+      detail: killed ? `killed ${proc} (${signal})` : `no live process to kill: ${proc}`,
+    };
+  }
+
   private async doSend(suite: string, step: SendStep): Promise<StepResult> {
     const { to, msg, fields } = step.send;
     const conn = this.conns[to];
-    if (!conn) return { suite, stepId: step.id, ok: false, detail: `no connection to ${to}` };
+    if (!conn) {
+      const detail = `no connection to ${to}`;
+      return step.expectError
+        ? { suite, stepId: step.id, ok: true, detail: `failed as expected: ${detail}` }
+        : { suite, stepId: step.id, ok: false, detail };
+    }
+    if (conn.destroyed) {
+      const detail = `connection to ${to} is closed`;
+      return step.expectError
+        ? { suite, stepId: step.id, ok: true, detail: `failed as expected: ${detail}` }
+        : { suite, stepId: step.id, ok: false, detail };
+    }
 
     const m = codec.findMessage(to, msg);
     const payload = codec.pack(to, msg, fields);
-    conn.send(m.id, payload);
     const timeout = step.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    const frame = await conn.recv(timeout);
+    let frame: Frame;
+    try {
+      conn.send(m.id, payload);
+      frame = await conn.recv(timeout);
+    } catch (e) {
+      if (!step.expectError) throw e;
+      return { suite, stepId: step.id, ok: true, detail: `failed as expected: ${(e as Error).message}` };
+    }
 
     const ackName = this.ackName(to, frame.msgId, m.response);
     const decoded = codec.unpack(to, ackName, frame.payload);
     const received = { msgId: frame.msgId, ack: ackName, fields: decoded };
 
     if (frame.msgId === 255) {
-      return {
-        suite,
-        stepId: step.id,
-        ok: false,
-        detail: `ErrorAck: code ${decoded.code} "${decoded.detail}"`,
-        received,
-      };
+      const detail = `ErrorAck: code ${decoded.code} "${decoded.detail}"`;
+      return step.expectError
+        ? { suite, stepId: step.id, ok: true, detail: `failed as expected: ${detail}`, received }
+        : { suite, stepId: step.id, ok: false, detail, received };
     }
     if (step.expectAck) {
       const problems = matchAck(decoded, step.expectAck);
       if (problems.length > 0) {
         return { suite, stepId: step.id, ok: false, detail: problems.join("; "), received };
       }
+    }
+    if (step.expectError) {
+      return { suite, stepId: step.id, ok: false, detail: `expected error but got ack ${ackName}`, received };
     }
     const label = step.expectAck
       ? `ack ${ackName} matches ${JSON.stringify(step.expectAck)}`

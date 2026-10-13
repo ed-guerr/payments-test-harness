@@ -1,6 +1,6 @@
 # backend/src/ledger — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:55:30.713Z · kb-forge 0.2 · source sha256:f6e14d6d6f0b
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:59:47.261Z · kb-forge 0.2 · source sha256:f6e14d6d6f0b
 
 ## Purpose
 

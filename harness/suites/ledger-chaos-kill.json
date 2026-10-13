@@ -1,0 +1,51 @@
+{
+  "name": "ledger-chaos-kill",
+  "description": "Chaos: SIGKILL the ledger mid-flow. The next ledger send fails with a typed connection error (asserted via expectError), pay-orders keeps serving, and the surviving state is exactly the pre-kill state — no partial writes",
+  "steps": [
+    {
+      "id": "t8001-a-to-b-2500",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": { "txn_id": 8001, "from_acct": "ACCT-001", "to_acct": "ACCT-002", "amount_cents": 2500 }
+      },
+      "expectAck": { "status": 0, "from_balance_after": 497500 }
+    },
+    {
+      "id": "assert-balance-before-kill",
+      "dbAssert": {
+        "sql": "SELECT (SELECT balance_cents FROM accounts WHERE acct = 'ACCT-001') AS from_bal, (SELECT balance_cents FROM accounts WHERE acct = 'ACCT-002') AS to_bal",
+        "expect": { "from_bal": 497500, "to_bal": 252500 }
+      }
+    },
+    {
+      "id": "kill-ledger",
+      "killProcess": { "proc": "ledger" }
+    },
+    {
+      "id": "t8002-after-kill-fails",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": { "txn_id": 8002, "from_acct": "ACCT-002", "to_acct": "ACCT-001", "amount_cents": 1000 }
+      },
+      "expectError": true
+    },
+    {
+      "id": "pay-orders-still-serving",
+      "send": {
+        "to": "pay-orders",
+        "msg": "CreatePayment",
+        "fields": { "txn_id": 8010, "account": "ACCT-001", "amount_cents": 1234, "currency": "USD" }
+      },
+      "expectAck": { "status": 0 }
+    },
+    {
+      "id": "assert-balance-unchanged",
+      "dbAssert": {
+        "sql": "SELECT (SELECT balance_cents FROM accounts WHERE acct = 'ACCT-001') AS from_bal, (SELECT balance_cents FROM accounts WHERE acct = 'ACCT-002') AS to_bal",
+        "expect": { "from_bal": 497500, "to_bal": 252500 }
+      }
+    }
+  ]
+}

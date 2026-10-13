@@ -225,6 +225,7 @@ function describeStep(step: Step): string {
   if ("send" in step) return `${step.send.msg} → ${step.send.to}`;
   if ("dbAssert" in step) return `dbAssert: ${step.dbAssert.sql}`;
   if ("delayMs" in step) return `wait ${step.delayMs} ms`;
+  if ("killProcess" in step) return `kill ${step.killProcess.proc} (${step.killProcess.signal ?? "SIGKILL"})`;
   return "";
 }
 
@@ -268,6 +269,7 @@ function StepDefinition({ step }: { step: Step }): JSX.Element {
         </div>
         <FieldList label="fields" fields={step.send.fields} />
         {step.expectAck && <FieldList label="expectAck" fields={step.expectAck} />}
+        {step.expectError !== undefined && <KVRow k="expectError" v={String(step.expectError)} />}
         {step.timeoutMs !== undefined && <KVRow k="timeoutMs" v={step.timeoutMs} />}
       </div>
     );
@@ -283,6 +285,18 @@ function StepDefinition({ step }: { step: Step }): JSX.Element {
           <KVRow k="params" v={step.dbAssert.params} />
         )}
         <FieldList label="expect" fields={step.dbAssert.expect} />
+      </div>
+    );
+  }
+  if ("killProcess" in step) {
+    return (
+      <div className="space-y-2 text-xs">
+        <div>
+          <span className="text-muted">kill </span>
+          <span className="font-mono text-fg">{step.killProcess.proc}</span>
+          <span className="text-muted"> ({step.killProcess.signal ?? "SIGKILL"})</span>
+        </div>
+        <KVRow k="note" v="chaos step — the process does not come back" />
       </div>
     );
   }

@@ -116,7 +116,8 @@ server.registerTool(
   {
     description:
       "Author a new test suite and write it to harness/suites/<name>.json. Step kinds: " +
-      '{id, send:{to,msg,fields},expectAck?,timeoutMs?} | {id, dbAssert:{sql,params?,expect}} | {id, delayMs}. ' +
+      '{id, send:{to,msg,fields},expectAck?,expectError?,timeoutMs?} | {id, dbAssert:{sql,params?,expect}} | {id, delayMs} | {id, killProcess:{proc,signal?}}. ' +
+      "expectError asserts a send fails (failure-mode tests); killProcess is a chaos step (SIGKILL/SIGTERM a process mid-run). " +
       "The suite is validated against the protocol registry before writing (unknown messages or missing fields are rejected).",
     inputSchema: {
       name: z.string().describe("Suite id, e.g. wire-echo-test"),
@@ -182,7 +183,10 @@ server.registerTool(
 async function runSuiteByName(name: string): Promise<unknown> {
   const suite = loadSuite(suiteFile(name));
   const cluster = await BackendCluster.start(backendBuildDir(), path.join(DATA_DIR(), `${name}.db`));
-  const runner = new Runner(cluster.conns, cluster.db, () => undefined, { runsDir: RUNS_DIR() });
+  const runner = new Runner(cluster.conns, cluster.db, () => undefined, {
+    runsDir: RUNS_DIR(),
+    killProcess: (p, s) => cluster.kill(p, s),
+  });
   try {
     const summary = await runner.runSuite(suite);
     const latest = Runner.latestRun(RUNS_DIR(), name);

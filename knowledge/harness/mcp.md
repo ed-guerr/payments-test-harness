@@ -1,6 +1,6 @@
 # harness/src/mcp — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:55:30.718Z · kb-forge 0.2 · source sha256:93c04d5dd5d5
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:59:47.265Z · kb-forge 0.2 · source sha256:c5379bf60849
 
 ## Purpose
 
@@ -11,7 +11,7 @@ The Model Context Protocol server (stdio). This is the agent-facing API: protoco
 | file | ~lines |
 |---|---|
 | kbTools.ts | 75 |
-| server.ts | 278 |
+| server.ts | 282 |
 
 ## Domain vocabulary
 
@@ -32,8 +32,8 @@ The Model Context Protocol server (stdio). This is the agent-facing API: protoco
 | `kbHintsFor(messageOrField: string)` | kbTools.ts:71 |
 | `text(payload: unknown)` | server.ts:38 |
 | `suiteFile(name: string)` | server.ts:46 |
-| `runSuiteByName(name: string)` | server.ts:182 |
-| `main` | server.ts:269 |
+| `runSuiteByName(name: string)` | server.ts:183 |
+| `main` | server.ts:273 |
 
 ## Common modification points
 
