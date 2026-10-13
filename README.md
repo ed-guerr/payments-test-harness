@@ -121,6 +121,43 @@ Read this as "protocol + single-threaded SQLite commit cost over loopback
 on one machine", not a scaling claim: each run is one client against a fresh
 three-process cluster.
 
+## Evaluation — does the knowledge base actually make a difference?
+
+The GIF is one unedited session; the eval is the controlled experiment
+behind it. `harness/src/eval/` runs a model-agnostic agent (OpenAI-
+compatible chat endpoint + the same 15 MCP tools an external client would
+use) through 11 plain-English tasks, twice per task — **KB on** (15 tools,
+`kb_search`/`kb_read` live) vs **KB off** (`MCP_NO_KB=1`, 13 tools) — and
+scores the artifact, not the agent's word: the generated suite is re-run on
+a fresh cluster and checked against an exact ground-truth checklist
+(balance math from the seed data, ack status codes, side-effect rows). No
+LLM judge. `pass` = suite created + green re-run + full checklist.
+
+```bash
+npm run eval:smoke            # 3 tasks x 1 run x both variants
+npm run eval                  # 11 tasks x 3 runs x both variants
+```
+
+Committed result — **Qwen3.8-27B Q4_K_M** (the GIF's model, via llama.cpp),
+3 runs per task, temperature 0, full-fidelity traces in
+[`harness/eval-reports/sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json):
+
+| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) |
+|---|---|---|---|---|---|---|
+| **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 |
+| **kb-off** | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 |
+
+What the numbers say, honestly: a strong local model plus the self-correcting
+loop (red suite → inspect → `update_suite` → re-run) can converge even
+schema-only — so on a 27B the KB's value shows as **efficiency**, not as
+pass-or-fail: KB-on suites were one-shot (avg 1.0 re-runs) vs 1.3 KB-off,
+and the single failure (KB-off, `unknown-account`, 2/3) is exactly the class
+of miss the KB exists to prevent. Expect the gap to widen toward pass rate
+on weaker models. Two tasks are KB-sensitive by construction — their
+ground truth lives only in the intern guides (e.g. *where* settlement money
+moves), and the prompts never leak it. Methodology, task set, and how to
+add tasks: [`docs/eval.md`](docs/eval.md).
+
 ## The wire protocol
 
 Little-endian frame: `u16 magic (0x5046) | u16 msg_id | u32 payload_len |
@@ -200,7 +237,8 @@ Risks / Inter-process interactions). Consumers:
 
 - **MCP test author** — `kb_search`/`kb_read` tools; `get_message_schema`
   carries the KB row as `notes`; `create_suite` failures carry `kbHints`.
-  `MCP_NO_KB=1` disables it all (the A/B demo). → [`docs/mcp.md`](docs/mcp.md)
+  `MCP_NO_KB=1` disables it all (the A/B switch the [eval](#evaluation--does-the-knowledge-base-actually-make-a-difference)
+  uses to measure the difference). → [`docs/mcp.md`](docs/mcp.md)
 - **Designer** — turns a plain-English change request into a reviewable
   design doc (X-macro proposal, handler sketch, risks citing `knowledge/`
   paths, suggested suite). Sample outputs: [`docs/designs/`](docs/designs/).
@@ -253,6 +291,8 @@ harness/
   src/mcp/            MCP server (15 tools) + KB tools
   src/kb/             kb-forge generator + deterministic retrieval
   src/design/         the designer CLI
+  src/eval/           the KB on/off evaluation harness (npm run eval)
+  eval-reports/       eval reports (sample-qwen3-27b.* committed; rest gitignored)
   suites/             8 committed sample suites (no-double-settle is agent-authored)
   scripts/            gen_registry.js · mcp-self-test.js · demo-gif/ (GIF capture pipeline)
 knowledge/            generated intern guides (+ INDEX.md + .manifest.json)
