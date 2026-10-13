@@ -1,11 +1,22 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Payments Test Harness</title>
+    <script>
+      // Restore the chosen theme before first paint (no palette flash).
+      // Default is dark; only "light" is persisted explicitly.
+      try {
+        if (localStorage.getItem("harness-theme") === "light") {
+          document.documentElement.dataset.theme = "light";
+        }
+      } catch {
+        /* ignore — default dark applies */
+      }
+    </script>
   </head>
-  <body class="bg-ink text-gray-200">
+  <body class="bg-ink text-fg">
     <div id="root"></div>
     <script type="module" src="./main.tsx"></script>
   </body>

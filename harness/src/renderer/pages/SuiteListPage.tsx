@@ -13,7 +13,7 @@ export function SuiteListPage(): JSX.Element {
         <button
           onClick={() => suites.forEach((s) => void runSuite(s.name))}
           disabled={runningSuite !== null}
-          className="text-xs px-3 py-1.5 rounded bg-edge hover:bg-gray-700 disabled:opacity-40"
+          className="text-xs px-3 py-1.5 rounded bg-edge hover:bg-faint/40 disabled:opacity-40"
         >
           Run all
         </button>

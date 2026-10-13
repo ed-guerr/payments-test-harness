@@ -33,7 +33,7 @@ export function SuitePage(): JSX.Element {
     <div className="grid grid-cols-[1fr_420px] gap-6">
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <Link to="/" className="text-xs text-muted hover:text-gray-200">
+          <Link to="/" className="text-xs text-muted hover:text-fg">
             ← suites
           </Link>
         </div>
@@ -77,8 +77,8 @@ export function SuitePage(): JSX.Element {
                       <td className="px-3 py-2">
                         <StepBadge r={r} running={running && !r} />
                       </td>
-                      <td className="px-3 py-2 font-mono text-gray-300">{step.id}</td>
-                      <td className="px-3 py-2 font-mono text-gray-400">{describeStep(step)}</td>
+                      <td className="px-3 py-2 font-mono text-dim">{step.id}</td>
+                      <td className="px-3 py-2 font-mono text-dim">{describeStep(step)}</td>
                       <td className="px-3 py-2 text-muted break-all">{r?.detail ?? "—"}</td>
                     </tr>
                     {isOpen && (
@@ -116,7 +116,7 @@ export function SuitePage(): JSX.Element {
         <div className="px-3 py-2 text-xs font-semibold text-muted border-b border-edge">
           Backend log
         </div>
-        <pre className="p-3 text-[11px] font-mono text-gray-400 h-[560px] overflow-auto">
+        <pre className="p-3 text-[11px] font-mono text-dim h-[560px] overflow-auto">
           {log.length === 0 ? "—" : log.join("\n")}
         </pre>
       </div>
@@ -159,7 +159,7 @@ function StepDetails({ step, result }: { step: Step; result?: StepResult }): JSX
               {result.detail}
             </div>
             {result.received !== undefined && (
-              <pre className="mt-2 bg-panel border border-edge rounded p-2 overflow-auto max-h-48 text-[11px] font-mono text-gray-400">
+              <pre className="mt-2 bg-panel border border-edge rounded p-2 overflow-auto max-h-48 text-[11px] font-mono text-dim">
                 {JSON.stringify(result.received, null, 2)}
               </pre>
             )}
@@ -176,9 +176,9 @@ function StepDefinition({ step }: { step: Step }): JSX.Element {
       <div className="space-y-2 text-xs">
         <div>
           <span className="text-muted">send </span>
-          <span className="font-mono text-gray-200">{step.send.msg}</span>
+          <span className="font-mono text-fg">{step.send.msg}</span>
           <span className="text-muted"> → </span>
-          <span className="font-mono text-gray-200">{step.send.to}</span>
+          <span className="font-mono text-fg">{step.send.to}</span>
         </div>
         <FieldList label="fields" fields={step.send.fields} />
         {step.expectAck && <FieldList label="expectAck" fields={step.expectAck} />}
@@ -191,7 +191,7 @@ function StepDefinition({ step }: { step: Step }): JSX.Element {
       <div className="space-y-2 text-xs">
         <div className="break-all">
           <span className="text-muted">sql </span>
-          <span className="font-mono text-gray-200">{step.dbAssert.sql}</span>
+          <span className="font-mono text-fg">{step.dbAssert.sql}</span>
         </div>
         {step.dbAssert.params && step.dbAssert.params.length > 0 && (
           <KVRow k="params" v={step.dbAssert.params} />
@@ -228,14 +228,14 @@ function KVGrid({ rows, label }: { rows: KVPair[]; label?: string }): JSX.Elemen
           return (
             <Fragment key={k}>
               <span
-                className={`px-2 py-1 text-gray-500 text-right select-none border-edge border-r ${
+                className={`px-2 py-1 text-faint text-right select-none border-edge border-r ${
                   notLast ? "border-b" : ""
                 }`}
               >
                 {k}
               </span>
               <span
-                className={`px-2 py-1 text-gray-200 break-all border-edge ${
+                className={`px-2 py-1 text-fg break-all border-edge ${
                   notLast ? "border-b" : ""
                 }`}
               >

@@ -2,8 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme tokens — RGB triplets consumed by tailwind.config.js (each color
+ * maps to `rgb(var(--c-*) / <alpha-value>)`). Dark (true black, neutral —
+ * no blue cast) is the default; `data-theme="light"` on <html> switches to
+ * paper beige. index.html restores the user's choice before first paint.
+ */
+:root {
+  --c-ink: 0 0 0;
+  --c-panel: 10 10 10;
+  --c-edge: 38 38 38;
+  --c-fg: 240 240 240;
+  --c-dim: 183 183 183;
+  --c-faint: 138 138 138;
+  --c-muted: 160 160 160;
+  --c-accent: 88 166 255;
+  --c-pass: 63 185 80;
+  --c-fail: 248 81 73;
+}
+
+[data-theme="light"] {
+  --c-ink: 236 229 210;
+  --c-panel: 245 240 227;
+  --c-edge: 211 200 171;
+  --c-fg: 38 34 26;
+  --c-dim: 93 86 71;
+  --c-faint: 139 129 104;
+  --c-muted: 111 103 83;
+  --c-accent: 26 95 180;
+  --c-pass: 46 125 50;
+  --c-fail: 192 57 43;
+}
+
 body {
-  @apply bg-ink text-gray-200 antialiased;
+  @apply bg-ink text-fg antialiased;
 }
 
 ::-webkit-scrollbar {

@@ -31,7 +31,7 @@ export function RegistryPage(): JSX.Element {
             key={p}
             onClick={() => setSelected(p)}
             className={`text-xs px-3 py-1.5 rounded font-mono ${
-              p === selected ? "bg-accent/20 text-accent" : "bg-edge text-muted hover:text-gray-200"
+              p === selected ? "bg-accent/20 text-accent" : "bg-edge text-muted hover:text-fg"
             }`}
           >
             {p}
@@ -56,7 +56,7 @@ export function RegistryPage(): JSX.Element {
                 <tbody>
                   {m.fields.map((f) => (
                     <tr key={f.name} className="border-t border-edge/50">
-                      <td className="px-4 py-1.5 font-mono text-gray-300">{f.name}</td>
+                      <td className="px-4 py-1.5 font-mono text-dim">{f.name}</td>
                       <td className="px-2 py-1.5 font-mono text-muted">{f.type}</td>
                       <td className="px-2 py-1.5 font-mono text-muted">offset {f.offset}</td>
                       <td className="px-2 py-1.5 font-mono text-muted text-right">{f.size} B</td>

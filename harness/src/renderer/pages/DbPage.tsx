@@ -96,7 +96,7 @@ export function DbPage(): JSX.Element {
               {rows.map((r, i) => (
                 <tr key={i} className="border-t border-edge/50">
                   {cols.map((c) => (
-                    <td key={c} className="px-3 py-1.5 font-mono text-gray-300 whitespace-nowrap">
+                    <td key={c} className="px-3 py-1.5 font-mono text-dim whitespace-nowrap">
                       {r[c] === null ? <span className="text-muted">NULL</span> : String(r[c])}
                     </td>
                   ))}
