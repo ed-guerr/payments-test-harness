@@ -1,6 +1,6 @@
 # harness/src/renderer — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:33:17.406Z · kb-forge 0.2 · source sha256:d9274a98be28
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T04:35:36.226Z · kb-forge 0.2 · source sha256:cb69ea9de225
 
 ## Purpose
 
@@ -10,15 +10,15 @@ React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step
 
 | file | ~lines |
 |---|---|
-| App.tsx | 59 |
+| App.tsx | 124 |
 | env.d.ts | 23 |
-| index.css | 19 |
-| index.html | 13 |
+| index.css | 51 |
+| index.html | 24 |
 | main.tsx | 17 |
 | /pages/DbPage.tsx | 117 |
 | /pages/RegistryPage.tsx | 74 |
 | /pages/SuiteListPage.tsx | 67 |
-| /pages/SuitePage.tsx | 114 |
+| /pages/SuitePage.tsx | 267 |
 | store.ts | 81 |
 
 ## Domain vocabulary
@@ -33,12 +33,19 @@ React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step
 
 | function | defined at |
 |---|---|
+| `SunIcon` | App.tsx:16 |
+| `MoonIcon` | App.tsx:34 |
+| `initialTheme` | App.tsx:54 |
 | `DbPage` | pages/DbPage.tsx:12 |
 | `RegistryPage` | pages/RegistryPage.tsx:13 |
 | `SuiteListPage` | pages/SuiteListPage.tsx:4 |
-| `SuitePage` | pages/SuitePage.tsx:7 |
-| `StepBadge({ r, running }: { r?: StepResult; running: boolean })` | pages/SuitePage.tsx:97 |
-| `describeStep(step: Step)` | pages/SuitePage.tsx:108 |
+| `SuitePage` | pages/SuitePage.tsx:8 |
+| `StepBadge({ r, running }: { r?: StepResult; running: boolean })` | pages/SuitePage.tsx:127 |
+| `describeStep(step: Step)` | pages/SuitePage.tsx:138 |
+| `StepDetails({ step, result }: { step: Step; result?: StepResult })` | pages/SuitePage.tsx:146 |
+| `StepDefinition({ step }: { step: Step })` | pages/SuitePage.tsx:173 |
+| `KVGrid({ rows, label }: { rows: KVPair[]; label?: string })` | pages/SuitePage.tsx:216 |
+| `KVRow({ k, v }: { k: string; v: string \| number \| (string \| number \| null)` | pages/SuitePage.tsx:264 |
 
 ## Common modification points
 

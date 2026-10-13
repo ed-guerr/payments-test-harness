@@ -5,55 +5,55 @@
       "path": "knowledge/backend/common.md",
       "sourceDir": "backend/src/common",
       "sourceHash": "103595b2628d",
-      "generatedAt": "2026-10-13T02:33:17.388Z"
+      "generatedAt": "2026-10-13T04:35:36.208Z"
     },
     {
       "path": "knowledge/backend/pay_orders.md",
       "sourceDir": "backend/src/pay_orders",
       "sourceHash": "c029293ed970",
-      "generatedAt": "2026-10-13T02:33:17.400Z"
+      "generatedAt": "2026-10-13T04:35:36.220Z"
     },
     {
       "path": "knowledge/backend/ledger.md",
       "sourceDir": "backend/src/ledger",
       "sourceHash": "f6e14d6d6f0b",
-      "generatedAt": "2026-10-13T02:33:17.401Z"
+      "generatedAt": "2026-10-13T04:35:36.221Z"
     },
     {
       "path": "knowledge/backend/auth_gateway.md",
       "sourceDir": "backend/src/auth_gateway",
       "sourceHash": "08396fa2df73",
-      "generatedAt": "2026-10-13T02:33:17.401Z"
+      "generatedAt": "2026-10-13T04:35:36.222Z"
     },
     {
       "path": "knowledge/harness/runner.md",
       "sourceDir": "harness/src/runner",
       "sourceHash": "ad000ab24871",
-      "generatedAt": "2026-10-13T02:33:17.402Z"
+      "generatedAt": "2026-10-13T04:35:36.222Z"
     },
     {
       "path": "knowledge/harness/protocol.md",
       "sourceDir": "harness/src/protocol",
       "sourceHash": "356e651504a7",
-      "generatedAt": "2026-10-13T02:33:17.404Z"
+      "generatedAt": "2026-10-13T04:35:36.224Z"
     },
     {
       "path": "knowledge/harness/main.md",
       "sourceDir": "harness/src/main",
       "sourceHash": "2f5e106a4e73",
-      "generatedAt": "2026-10-13T02:33:17.405Z"
+      "generatedAt": "2026-10-13T04:35:36.225Z"
     },
     {
       "path": "knowledge/harness/mcp.md",
       "sourceDir": "harness/src/mcp",
       "sourceHash": "93c04d5dd5d5",
-      "generatedAt": "2026-10-13T02:33:17.405Z"
+      "generatedAt": "2026-10-13T04:35:36.226Z"
     },
     {
       "path": "knowledge/harness/renderer.md",
       "sourceDir": "harness/src/renderer",
-      "sourceHash": "d9274a98be28",
-      "generatedAt": "2026-10-13T02:33:17.406Z"
+      "sourceHash": "cb69ea9de225",
+      "generatedAt": "2026-10-13T04:35:36.226Z"
     }
   ]
 }

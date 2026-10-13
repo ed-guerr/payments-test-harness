@@ -83,6 +83,16 @@ HARNESS_SELF_TEST=1 npm start   # headless e2e self-test (drives the real UI)
 > (The committed harness uses Node's built-in `node:sqlite`, so only the
 > dev/build tooling needs approving.)
 
+## CI
+
+GitHub Actions (`.github/workflows/verify.yml`) runs two jobs on every push/PR
+to `main`:
+
+| Job | What it runs |
+|---|---|
+| `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), KB staleness check. Run reports are uploaded as an artifact. |
+| `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
+
 ## The wire protocol
 
 Little-endian frame: `u16 magic (0x5046) | u16 msg_id | u32 payload_len |
@@ -194,7 +204,7 @@ harness/
   src/mcp/            MCP server (15 tools) + KB tools
   src/kb/             kb-forge generator + deterministic retrieval
   src/design/         the designer CLI
-  suites/             4 committed sample suites
+  suites/             6 committed sample suites
   scripts/            gen_registry.js · mcp-self-test.js
 knowledge/            generated intern guides (+ INDEX.md + .manifest.json)
 docs/
