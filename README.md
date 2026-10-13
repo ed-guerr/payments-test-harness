@@ -93,6 +93,25 @@ to `main`:
 | `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), KB staleness check. Run reports are uploaded as an artifact. |
 | `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
 
+## Benchmark
+
+`npm run bench` starts a fresh backend cluster, sends sequential
+`TransferFunds` (one in flight) from a single client, and reports throughput
+plus ack-latency percentiles. Each op is a full round trip: framed request
+out, C handler executes (SQLite read → validate → commit), framed ack back.
+500 measured ops after 50 warmup, three runs on the author's laptop
+(Apple Silicon, macOS):
+
+| ops | throughput | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|
+| 500 | 8,233/s | 99 μs | 165 μs | 271 μs | 2.59 ms |
+| 500 | 8,677/s | 90 μs | 161 μs | 350 μs | 2.70 ms |
+| 500 | 8,445/s | 96 μs | 150 μs | 389 μs | 2.65 ms |
+
+Read this as "protocol + single-threaded SQLite commit cost over loopback
+on one machine", not a scaling claim: each run is one client against a fresh
+three-process cluster.
+
 ## The wire protocol
 
 Little-endian frame: `u16 magic (0x5046) | u16 msg_id | u32 payload_len |
@@ -109,7 +128,7 @@ Full field tables, offsets, and ack status codes: [`docs/protocol.md`](docs/prot
 
 ## Test suites
 
-Suites are plain JSON in `harness/suites/` — three step kinds, registry-
+Suites are plain JSON in `harness/suites/` — four step kinds, registry-
 validated, each run against a **fresh backend cluster + fresh database**
 (`harness/data/<suite>.db`, kept for inspection):
 
@@ -124,14 +143,19 @@ validated, each run against a **fresh backend cluster + fresh database**
 ```
 
 - `send` — encode via the registry codec, wait for the matching ack;
-  `expectAck` is a **partial match** on fields.
+  `expectAck` is a **partial match** on fields; `expectError: true` inverts
+  the check (the step passes when the send fails — failure-mode tests).
 - `dbAssert` — one-row `SELECT` + partial match on columns (reads the same
   SQLite file the C processes write).
 - `delayMs` — pacing across fire-and-forget inter-process forwards.
+- `killProcess` — chaos: SIGKILL/SIGTERM a backend process mid-run.
 
-Four suites are committed: `payment-happy-path` (10/10 green),
-`insufficient-funds`, `cancel-payment`, and `assertion-failure-demo`
-(demonstrates a failing run with an expected-vs-actual diff).
+Seven suites are committed: `payment-happy-path` (10/10 green),
+`ledger-chain-reversals` (22 steps), `insufficient-funds`, `cancel-payment`,
+`transfer-800`, `ledger-chaos-kill` (kills the ledger mid-run, asserts the
+typed failure with `expectError`, verifies state is exactly pre-kill), and
+`assertion-failure-demo` (demonstrates a failing run with an
+expected-vs-actual diff).
 
 ```bash
 npm run run:cli -- suites/insufficient-funds.json
@@ -204,7 +228,7 @@ harness/
   src/mcp/            MCP server (15 tools) + KB tools
   src/kb/             kb-forge generator + deterministic retrieval
   src/design/         the designer CLI
-  suites/             6 committed sample suites
+  suites/             7 committed sample suites
   scripts/            gen_registry.js · mcp-self-test.js
 knowledge/            generated intern guides (+ INDEX.md + .manifest.json)
 docs/
