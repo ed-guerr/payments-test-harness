@@ -11,6 +11,15 @@ truth for the wire protocol, generated from the C code, consumed by every
 layer* — and a knowledge pipeline that turns "the code says what fields
 exist" into "the agent knows what the code does".
 
+**~57-second demo** (half speed) — the suites list; a live `pi` session running a local
+27B model (llama.cpp `qwen3`) that authors a double-settle test through the
+harness MCP tools and runs it 9/9 green; back in the app, *that* suite has
+appeared in the list and runs green; then `ledger-chaos-kill` with the
+`ECONNRESET` failure expanded → Protocol Registry → verified balances in the
+per-suite database:
+
+![demo](docs/demo.gif)
+
 ## Architecture
 
 ```
@@ -130,7 +139,9 @@ Full field tables, offsets, and ack status codes: [`docs/protocol.md`](docs/prot
 
 Suites are plain JSON in `harness/suites/` — four step kinds, registry-
 validated, each run against a **fresh backend cluster + fresh database**
-(`harness/data/<suite>.db`, kept for inspection):
+(`harness/data/<suite>.db`, kept for inspection). `no-double-settle` was
+not hand-written: a local LLM authored it through the MCP server (the GIF
+above is that session, unedited):
 
 ```json
 {
@@ -188,6 +199,10 @@ Risks / Inter-process interactions). Consumers:
 
 ## The 6-minute demo
 
+(Quick version: the half-speed GIF at the top of this file — step 5 is the
+part it plays live.)
+
+
 1. **0:00 Build & introspect.** `make -C backend && npm run gen:registry` —
    "the registry is generated from the C function-pointer tables, not
    written."
@@ -228,14 +243,17 @@ harness/
   src/mcp/            MCP server (15 tools) + KB tools
   src/kb/             kb-forge generator + deterministic retrieval
   src/design/         the designer CLI
-  suites/             7 committed sample suites
-  scripts/            gen_registry.js · mcp-self-test.js
+  suites/             8 committed sample suites (no-double-settle is agent-authored)
+  scripts/            gen_registry.js · mcp-self-test.js · demo-gif/ (GIF capture pipeline)
 knowledge/            generated intern guides (+ INDEX.md + .manifest.json)
 docs/
   plans/InitialDesign.md    the full design plan (phases P1–P6)
   conventions/conventions.md the project's conventions & gates
   protocol.md · mcp.md · knowledge.md
   designs/          sample designer output (KB-grounded vs schema-only pair)
+  demo.gif          the ~57s half-speed demo (linked at the top of the
+                    README; regenerate with the harness/scripts/demo-gif/
+                    pipeline)
 ```
 
 ## Design notes
