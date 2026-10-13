@@ -78,8 +78,9 @@ npm run gen:registry
 
 # 3. Verify everything — one command:
 npm run verify                  # backend build + ASan/UBSan smoke (28 checks) + fmt
-                                # + typecheck + happy-path suite + MCP self-test
-                                # (KB on/off A/B) + KB staleness check
+                                # + typecheck + unit tests + happy-path suite
+                                # + MCP self-test (KB on/off A/B)
+                                # + recorded-trace replay + KB staleness check
 
 # 4. The app
 npm start                       # Electron: suites / registry / database
@@ -99,8 +100,16 @@ to `main`:
 
 | Job | What it runs |
 |---|---|
-| `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), KB staleness check. Run reports are uploaded as an artifact. |
+| `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, `node:test` unit tests (codec round-trip, ack matching, KB search, suite validation, hostile-suite cases, read-only db), live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), recorded-trace replay of the agent surface (no LLM), KB staleness check. Run reports are uploaded as an artifact. |
 | `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
+| `eval` (opt-in) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist (`.github/workflows/eval.yml`) — on a schedule, on demand, and on pushes touching the agent surface. |
+
+The harness itself is unit-tested with the built-in `node:test` runner
+(`npm run test:unit`, 23 tests, no test framework added): the codec
+round-trips every message in the registry, `matchAck` pin semantics, KB
+search finds the row the eval depends on, `validateSuite` rejects the
+hostile-suite cases (unknown messages, path-traversal names, non-SELECT
+dbAssert), and the read-only db handle refuses DDL.
 
 ## Benchmark
 
@@ -157,6 +166,16 @@ on weaker models. Two tasks are KB-sensitive by construction — their
 ground truth lives only in the intern guides (e.g. *where* settlement money
 moves), and the prompts never leak it. Methodology, task set, and how to
 add tasks: [`docs/eval.md`](docs/eval.md).
+
+The eval is also a regression gate in two layers. **Layer A** is
+deterministic: `npm run eval:replay` (in `npm run verify`, ~4 s, no LLM)
+replays recorded agent tool-call traces against the live MCP server and
+asserts properties of each result — catching tool renames, KB content
+regressions (the KB on/off `notes` pin), and error-message wording changes
+on every push. **Layer B** is a real-model job (`.github/workflows/eval.yml`)
+that runs the full eval and fails on regression below the per-model baseline
+committed in `harness/src/eval/baseline.json`; it is opt-in via the
+`EVAL_RUN_EVAL` repository variable + `EVAL_API_*` secrets.
 
 ## The wire protocol
 
@@ -292,7 +311,9 @@ harness/
   src/kb/             kb-forge generator + deterministic retrieval
   src/design/         the designer CLI
   src/eval/           the KB on/off evaluation harness (npm run eval)
+                      + recorded-trace replay gate (npm run eval:replay)
   eval-reports/       eval reports (sample-qwen3-27b.* committed; rest gitignored)
+  src/**/*.test.ts    node:test unit tests (npm run test:unit)
   suites/             8 committed sample suites (no-double-settle is agent-authored)
   scripts/            gen_registry.js · mcp-self-test.js · demo-gif/ (GIF capture pipeline)
 knowledge/            generated intern guides (+ INDEX.md + .manifest.json)

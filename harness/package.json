@@ -21,6 +21,8 @@
     "mcp": "tsx src/mcp/server.ts",
     "eval": "tsx src/eval/cli.ts",
     "eval:smoke": "tsx src/eval/cli.ts --smoke",
+    "eval:replay": "tsx src/eval/replay.ts",
+    "test:unit": "tsx --test src/protocol/codec.test.ts src/runner/matchAck.test.ts src/runner/report.test.ts src/kb/kb.test.ts src/backend/suites.test.ts src/db/db.test.ts",
     "test:mcp": "node scripts/mcp-self-test.js",
     "verify": "sh scripts/verify.sh",
     "typecheck": "tsc --noEmit",
