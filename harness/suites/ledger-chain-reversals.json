@@ -1,0 +1,308 @@
+{
+  "name": "ledger-chain-reversals",
+  "description": "Long chain of 6 ledger transfers (incl. round-trips and RESERVE legs), then 5 non-LIFO reversals proving per-txn independence; ends with only T3002 applied (balances = seed + T3002), plus double-reverse and missing-txn rejections (TR_NO_ENTRY=4)",
+  "steps": [
+    {
+      "id": "t3001-a-to-b-10k",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 3001,
+          "from_acct": "ACCT-001",
+          "to_acct": "ACCT-002",
+          "amount_cents": 10000
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 490000
+      }
+    },
+    {
+      "id": "t3002-b-to-a-5k",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 3002,
+          "from_acct": "ACCT-002",
+          "to_acct": "ACCT-001",
+          "amount_cents": 5000
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 255000
+      }
+    },
+    {
+      "id": "t3003-a-to-b-75k",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 3003,
+          "from_acct": "ACCT-001",
+          "to_acct": "ACCT-002",
+          "amount_cents": 75000
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 420000
+      }
+    },
+    {
+      "id": "t3004-b-to-reserve-30k",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 3004,
+          "from_acct": "ACCT-002",
+          "to_acct": "RESERVE",
+          "amount_cents": 30000
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 300000
+      }
+    },
+    {
+      "id": "t3005-reserve-to-a-20k",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 3005,
+          "from_acct": "RESERVE",
+          "to_acct": "ACCT-001",
+          "amount_cents": 20000
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 1010000
+      }
+    },
+    {
+      "id": "t3006-a-to-b-12345",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 3006,
+          "from_acct": "ACCT-001",
+          "to_acct": "ACCT-002",
+          "amount_cents": 12345
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 427655
+      }
+    },
+    {
+      "id": "chain-balance-a",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "ACCT-001"
+        ],
+        "expect": {
+          "balance_cents": 427655
+        }
+      }
+    },
+    {
+      "id": "chain-balance-b",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "ACCT-002"
+        ],
+        "expect": {
+          "balance_cents": 312345
+        }
+      }
+    },
+    {
+      "id": "chain-6-applied",
+      "dbAssert": {
+        "sql": "SELECT COUNT(*) AS n FROM ledger_entries WHERE status = 'applied'",
+        "params": [],
+        "expect": {
+          "n": 6
+        }
+      }
+    },
+    {
+      "id": "r3001",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3001
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 437655
+      }
+    },
+    {
+      "id": "r3004",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3004
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 332345
+      }
+    },
+    {
+      "id": "r3003",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3003
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 512655
+      }
+    },
+    {
+      "id": "r3006",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3006
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 525000
+      }
+    },
+    {
+      "id": "r3005",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3005
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 1000000
+      }
+    },
+    {
+      "id": "final-balance-a",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "ACCT-001"
+        ],
+        "expect": {
+          "balance_cents": 505000
+        }
+      }
+    },
+    {
+      "id": "final-balance-b",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "ACCT-002"
+        ],
+        "expect": {
+          "balance_cents": 245000
+        }
+      }
+    },
+    {
+      "id": "final-balance-reserve",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "RESERVE"
+        ],
+        "expect": {
+          "balance_cents": 1000000
+        }
+      }
+    },
+    {
+      "id": "t3002-still-applied",
+      "dbAssert": {
+        "sql": "SELECT status FROM ledger_entries WHERE txn_id = ?",
+        "params": [
+          3002
+        ],
+        "expect": {
+          "status": "applied"
+        }
+      }
+    },
+    {
+      "id": "t3001-reversed",
+      "dbAssert": {
+        "sql": "SELECT status FROM ledger_entries WHERE txn_id = ?",
+        "params": [
+          3001
+        ],
+        "expect": {
+          "status": "reversed"
+        }
+      }
+    },
+    {
+      "id": "five-reversed",
+      "dbAssert": {
+        "sql": "SELECT COUNT(*) AS n FROM ledger_entries WHERE txn_id IN (3001,3003,3004,3005,3006) AND status = 'reversed'",
+        "params": [],
+        "expect": {
+          "n": 5
+        }
+      }
+    },
+    {
+      "id": "double-reverse-3001-rejected",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3001
+        }
+      },
+      "expectAck": {
+        "status": 4
+      }
+    },
+    {
+      "id": "reverse-missing-3999-rejected",
+      "send": {
+        "to": "ledger",
+        "msg": "ReverseTransfer",
+        "fields": {
+          "txn_id": 3999
+        }
+      },
+      "expectAck": {
+        "status": 4
+      }
+    }
+  ]
+}
