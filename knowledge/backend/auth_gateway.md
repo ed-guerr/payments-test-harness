@@ -1,6 +1,6 @@
 # backend/src/auth_gateway — Intern Guide
 
-> generated 2026-10-12T22:22:44.517Z · kb-forge 0.1 · source sha256:08396fa2df73
+> generated 2026-10-13T01:38:34.533Z · kb-forge 0.2 · source sha256:08396fa2df73
 
 ## Purpose
 

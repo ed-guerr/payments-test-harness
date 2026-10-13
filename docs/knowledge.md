@@ -57,7 +57,7 @@ wire schema alone.
 
 | Mode | How | Needs |
 |---|---|---|
-| **deterministic** (default) | mechanical extraction (file listing, C function signatures with `file:line`, message tables from the registry, TODO/FIXME) + the curated facts in `harness/src/kb/meta.ts` | nothing — runs offline |
+| **deterministic** (default) | mechanical extraction (file listing, C/TS function and class signatures with `file:line`, message tables from the registry, TODO/FIXME) + the curated facts in `harness/src/kb/meta.ts` | nothing — runs offline |
 | **LLM-enhanced** | the assembled context + curated facts are sent to an OpenAI-compatible endpoint under a strict "cite `file:line`, never invent" prompt; the response replaces the prose | `KB_API_KEY` (+ `KB_PROVIDER`/`KB_MODEL`/`KB_BASE_URL`) |
 
 Guides are **generated, then committed** (same pattern as the registry): the

@@ -1,6 +1,6 @@
 # harness/src/main — Intern Guide
 
-> generated 2026-10-12T22:22:44.519Z · kb-forge 0.1 · source sha256:00f4888067e2
+> generated 2026-10-13T01:38:34.536Z · kb-forge 0.2 · source sha256:00f4888067e2
 
 ## Purpose
 
@@ -23,7 +23,12 @@ Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on,
 
 ## Key functions
 
-_no top-level C function definitions in this directory_
+| function | defined at |
+|---|---|
+| `createWindow` | main.ts:27 |
+| `sendUi(e: UiEvent)` | main.ts:43 |
+| `registerIpc` | main.ts:47 |
+| `selfTest` | main.ts:91 |
 
 ## Common modification points
 

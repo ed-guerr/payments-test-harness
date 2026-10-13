@@ -1,6 +1,6 @@
 # harness/src/protocol — Intern Guide
 
-> generated 2026-10-12T22:22:44.518Z · kb-forge 0.1 · source sha256:356e651504a7
+> generated 2026-10-13T01:38:34.535Z · kb-forge 0.2 · source sha256:356e651504a7
 
 ## Purpose
 
@@ -25,7 +25,19 @@ Wire protocol layer in TypeScript. registry.json (generated from the C binaries'
 
 ## Key functions
 
-_no top-level C function definitions in this directory_
+| function | defined at |
+|---|---|
+| `listProcs` | codec.ts:16 |
+| `getProc(proc: string)` | codec.ts:20 |
+| `findMessage(proc: string, name: string)` | codec.ts:32 |
+| `messageSize(proc: string, name: string)` | codec.ts:39 |
+| `pack(proc: string, name: string, fields: Record<string, FieldValue>)` | codec.ts:43 |
+| `unpack(proc: string, name: string, payload: Buffer)` | codec.ts:54 |
+| `writeField(buf: Buffer, f: FieldDef, v: FieldValue)` | codec.ts:66 |
+| `readField(buf: Buffer, f: FieldDef)` | codec.ts:95 |
+| `frameHeader(msgId: number, payloadLen: number)` | codec.ts:116 |
+| `parseHeader(hdr: Buffer)` | codec.ts:125 |
+| `Conn` | conn.ts:20 |
 
 ## Common modification points
 

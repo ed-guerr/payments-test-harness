@@ -2,8 +2,8 @@
  * kb/forge.ts — generates the intern guides into knowledge/.
  *
  * Pipeline (deterministic mode, no API key):
- *   1. Context assembly: file listing + line counts, extracted C function
- *      signatures, message tables from the registry, TODO/FIXME markers, and
+ *   1. Context assembly: file listing + line counts, extracted C/TS function
+ *      and class signatures, message tables from the registry, TODO/FIXME markers, and
  *      a content hash of the source directory.
  *   2. Rendering: the fixed §6.2 section schema, combining the mechanical
  *      extraction with the curated facts in kb/meta.ts.
@@ -22,7 +22,7 @@ import { packageRoot } from "../backend/paths";
 import type { Registry } from "../protocol/types";
 import registryJson from "../protocol/registry.json";
 
-const KB_FORGE_VERSION = "0.1";
+const KB_FORGE_VERSION = "0.2";
 const REPO_ROOT = (): string => path.join(packageRoot(), "..");
 const KB_DIR = (): string => path.join(REPO_ROOT(), "knowledge");
 const registry = registryJson as unknown as Registry;
@@ -56,14 +56,21 @@ function listFiles(dir: string): FileRow[] {
   return out;
 }
 
+interface FnRow {
+  name: string;
+  params: string;
+  file: string;
+  line: number;
+}
+
 /** Extract top-level C function definitions (Allman style: `{` on the next line). */
-function extractFunctions(dir: string): { name: string; params: string; file: string; line: number }[] {
-  const out: { name: string; params: string; file: string; line: number }[] = [];
+function extractCFunctions(dir: string): FnRow[] {
+  const out: FnRow[] = [];
   const RESERVED = new Set(["if", "for", "while", "switch", "return", "sizeof"]);
   const walk = (d: string, rel: string): void => {
     for (const entry of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       if (entry.isDirectory() && !entry.name.startsWith(".")) {
-        walk(path.join(d, entry.name), `${rel}/${entry.name}`);
+        walk(path.join(d, entry.name), rel ? `${rel}/${entry.name}` : entry.name);
         continue;
       }
       if (!entry.name.endsWith(".c")) continue;
@@ -86,6 +93,39 @@ function extractFunctions(dir: string): { name: string; params: string; file: st
   };
   walk(dir, "");
   return out;
+}
+
+/** Extract top-level TS/TSX function and class declarations (top-level = column 0). */
+function extractTsFunctions(dir: string): FnRow[] {
+  const out: FnRow[] = [];
+  const FN_RE = /^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/;
+  const CLASS_RE = /^(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/;
+  const SKIP = new Set(["node_modules", "build", "dist"]);
+  const walk = (d: string, rel: string): void => {
+    for (const entry of fs.readdirSync(d, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.isDirectory()) {
+        if (!entry.name.startsWith(".") && !SKIP.has(entry.name)) walk(path.join(d, entry.name), rel ? `${rel}/${entry.name}` : entry.name);
+        continue;
+      }
+      if (!entry.name.endsWith(".ts") && !entry.name.endsWith(".tsx")) continue;
+      const lines = fs.readFileSync(path.join(d, entry.name), "utf8").split("\n");
+      const file = rel ? `${rel}/${entry.name}` : entry.name;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] ?? "";
+        const fn = FN_RE.exec(line);
+        const cls = fn ? null : CLASS_RE.exec(line);
+        if (fn) out.push({ name: fn[1] ?? "", params: (fn[2] ?? "").replace(/\s+/g, " ").trim(), file, line: i + 1 });
+        else if (cls) out.push({ name: cls[1] ?? "", params: "", file, line: i + 1 });
+      }
+    }
+  };
+  walk(dir, "");
+  return out;
+}
+
+/** Top-level function/class definitions: C (Allman) + TS/TSX (column 0). */
+function extractFunctions(dir: string): FnRow[] {
+  return [...extractCFunctions(dir), ...extractTsFunctions(dir)];
 }
 
 function extractTodos(dir: string): string[] {
@@ -120,7 +160,7 @@ export function hashDir(dir: string): string {
 export interface DirContext {
   meta: DirMeta;
   files: FileRow[];
-  functions: { name: string; params: string; file: string; line: number }[];
+  functions: FnRow[];
   messages: { name: string; id: number; direction: "in" | "out"; size: number }[];
   todos: string[];
   sourceHash: string;
@@ -180,9 +220,9 @@ export function renderGuide(ctx: DirContext, generatedAt: string): string {
   }
   parts.push(`## Key functions`);
   if (ctx.functions.length === 0) {
-    parts.push("_no top-level C function definitions in this directory_");
+    parts.push("_no top-level function or class declarations extracted for this directory_");
   } else {
-    const rows = ctx.functions.map((f) => [`\`${f.name}(${f.params})\``, `${f.file}:${f.line}`]);
+    const rows = ctx.functions.map((f) => [f.params ? `\`${f.name}(${f.params})\`` : `\`${f.name}\``, `${f.file}:${f.line}`]);
     parts.push(mdTable(["function", "defined at"], rows));
   }
   parts.push(`## Common modification points`);

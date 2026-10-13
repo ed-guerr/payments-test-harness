@@ -5,55 +5,55 @@
       "path": "knowledge/backend/common.md",
       "sourceDir": "backend/src/common",
       "sourceHash": "103595b2628d",
-      "generatedAt": "2026-10-12T22:22:44.505Z"
+      "generatedAt": "2026-10-13T01:38:34.521Z"
     },
     {
       "path": "knowledge/backend/pay_orders.md",
       "sourceDir": "backend/src/pay_orders",
       "sourceHash": "c029293ed970",
-      "generatedAt": "2026-10-12T22:22:44.516Z"
+      "generatedAt": "2026-10-13T01:38:34.532Z"
     },
     {
       "path": "knowledge/backend/ledger.md",
       "sourceDir": "backend/src/ledger",
       "sourceHash": "f6e14d6d6f0b",
-      "generatedAt": "2026-10-12T22:22:44.517Z"
+      "generatedAt": "2026-10-13T01:38:34.533Z"
     },
     {
       "path": "knowledge/backend/auth_gateway.md",
       "sourceDir": "backend/src/auth_gateway",
       "sourceHash": "08396fa2df73",
-      "generatedAt": "2026-10-12T22:22:44.517Z"
+      "generatedAt": "2026-10-13T01:38:34.533Z"
     },
     {
       "path": "knowledge/harness/runner.md",
       "sourceDir": "harness/src/runner",
       "sourceHash": "ad000ab24871",
-      "generatedAt": "2026-10-12T22:22:44.518Z"
+      "generatedAt": "2026-10-13T01:38:34.534Z"
     },
     {
       "path": "knowledge/harness/protocol.md",
       "sourceDir": "harness/src/protocol",
       "sourceHash": "356e651504a7",
-      "generatedAt": "2026-10-12T22:22:44.518Z"
+      "generatedAt": "2026-10-13T01:38:34.535Z"
     },
     {
       "path": "knowledge/harness/main.md",
       "sourceDir": "harness/src/main",
       "sourceHash": "00f4888067e2",
-      "generatedAt": "2026-10-12T22:22:44.519Z"
+      "generatedAt": "2026-10-13T01:38:34.536Z"
     },
     {
       "path": "knowledge/harness/mcp.md",
       "sourceDir": "harness/src/mcp",
       "sourceHash": "93c04d5dd5d5",
-      "generatedAt": "2026-10-12T22:22:44.520Z"
+      "generatedAt": "2026-10-13T01:38:34.537Z"
     },
     {
       "path": "knowledge/harness/renderer.md",
       "sourceDir": "harness/src/renderer",
       "sourceHash": "dfb3d70f44a4",
-      "generatedAt": "2026-10-12T22:22:44.520Z"
+      "generatedAt": "2026-10-13T01:38:34.537Z"
     }
   ]
 }

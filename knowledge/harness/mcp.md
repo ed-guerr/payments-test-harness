@@ -1,6 +1,6 @@
 # harness/src/mcp — Intern Guide
 
-> generated 2026-10-12T22:22:44.520Z · kb-forge 0.1 · source sha256:93c04d5dd5d5
+> generated 2026-10-13T01:38:34.537Z · kb-forge 0.2 · source sha256:93c04d5dd5d5
 
 ## Purpose
 
@@ -23,7 +23,17 @@ The Model Context Protocol server (stdio). This is the agent-facing API: protoco
 
 ## Key functions
 
-_no top-level C function definitions in this directory_
+| function | defined at |
+|---|---|
+| `kbEnabled` | kbTools.ts:14 |
+| `text(payload: unknown)` | kbTools.ts:18 |
+| `registerKbTools(server: McpServer)` | kbTools.ts:22 |
+| `messageKbNotes(processName: string, messageName: string)` | kbTools.ts:57 |
+| `kbHintsFor(messageOrField: string)` | kbTools.ts:71 |
+| `text(payload: unknown)` | server.ts:38 |
+| `suiteFile(name: string)` | server.ts:46 |
+| `runSuiteByName(name: string)` | server.ts:182 |
+| `main` | server.ts:269 |
 
 ## Common modification points
 

@@ -1,6 +1,6 @@
 # harness/src/runner — Intern Guide
 
-> generated 2026-10-12T22:22:44.518Z · kb-forge 0.1 · source sha256:ad000ab24871
+> generated 2026-10-13T01:38:34.534Z · kb-forge 0.2 · source sha256:ad000ab24871
 
 ## Purpose
 
@@ -24,7 +24,13 @@ The suite execution engine. Interprets suite JSON (send / dbAssert / delayMs ste
 
 ## Key functions
 
-_no top-level C function definitions in this directory_
+| function | defined at |
+|---|---|
+| `parseArgs(argv: string[])` | cli.ts:22 |
+| `printEvent(e: RunnerEvent, json: boolean)` | cli.ts:33 |
+| `main` | cli.ts:53 |
+| `Runner` | runner.ts:76 |
+| `sleep(ms: number)` | runner.ts:224 |
 
 ## Common modification points
 

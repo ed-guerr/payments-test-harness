@@ -1,6 +1,6 @@
 # backend/src/ledger — Intern Guide
 
-> generated 2026-10-12T22:22:44.517Z · kb-forge 0.1 · source sha256:f6e14d6d6f0b
+> generated 2026-10-13T01:38:34.533Z · kb-forge 0.2 · source sha256:f6e14d6d6f0b
 
 ## Purpose
 

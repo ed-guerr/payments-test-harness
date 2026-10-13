@@ -1,6 +1,6 @@
 # harness/src/renderer — Intern Guide
 
-> generated 2026-10-12T22:22:44.520Z · kb-forge 0.1 · source sha256:dfb3d70f44a4
+> generated 2026-10-13T01:38:34.537Z · kb-forge 0.2 · source sha256:dfb3d70f44a4
 
 ## Purpose
 
@@ -30,7 +30,14 @@ React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step
 
 ## Key functions
 
-_no top-level C function definitions in this directory_
+| function | defined at |
+|---|---|
+| `DbPage` | pages/DbPage.tsx:12 |
+| `RegistryPage` | pages/RegistryPage.tsx:13 |
+| `SuiteListPage` | pages/SuiteListPage.tsx:4 |
+| `SuitePage` | pages/SuitePage.tsx:7 |
+| `StepBadge({ r, running }: { r?: StepResult; running: boolean })` | pages/SuitePage.tsx:97 |
+| `describeStep(step: Step)` | pages/SuitePage.tsx:108 |
 
 ## Common modification points
 
