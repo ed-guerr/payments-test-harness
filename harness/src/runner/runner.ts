@@ -145,8 +145,18 @@ export class Runner {
   static latestRun(runsDir: string, suite?: string): { file: string; data: unknown } | null {
     const files = fs
       .readdirSync(runsDir)
-      .filter((f) => f.endsWith(".json") && (!suite || f.startsWith(`${suite}-`)))
-      .sort();
+      .filter((f) => {
+        if (!f.endsWith(".json")) return false;
+        if (suite) {
+          // "<suite>-" must be followed by a timestamp digit, so a sibling
+          // suite whose name extends this one (no-double-settle-minimal)
+          // doesn't match no-double-settle's runs.
+          if (!f.startsWith(`${suite}-`)) return false;
+          if (!/^\d/.test(f.slice(suite.length + 1))) return false;
+        }
+        return true;
+      })
+      .sort(); // ISO timestamps in the filename sort chronologically
     const last = files[files.length - 1];
     if (!last) return null;
     return { file: path.join(runsDir, last), data: JSON.parse(fs.readFileSync(path.join(runsDir, last), "utf8")) };
