@@ -64,6 +64,14 @@ export const useHarness = create<HarnessState>((set, get) => ({
         set((s) => ({ suiteResults: { ...s.suiteResults, [r.suite]: r } }));
         break;
       }
+      case "suites-changed": {
+        // Pushed by the main process's suite-dir watcher: new/edited/deleted
+        // suite files appear here without a reload. Per-suite results are
+        // kept (keyed by name); new suites simply read as "not run".
+        const e2 = e as unknown as { suites: SuiteMeta[] };
+        set({ suites: e2.suites });
+        break;
+      }
       case "suite-start":
       case "done":
         break;

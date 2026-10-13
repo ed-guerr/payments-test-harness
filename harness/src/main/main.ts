@@ -11,7 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
 import { backendBuildDir, DATA_DIR, RUNS_DIR, SUITES_DIR } from "../backend/paths";
-import { listSuites, loadSuite } from "../backend/suites";
+import { listSuites, loadSuite, SuiteMeta } from "../backend/suites";
 import { Db, DbRow } from "../db/db";
 import { Runner } from "../runner/runner";
 import type { RunnerEvent, SuiteResult } from "../runner/runner";
@@ -20,7 +20,10 @@ import type { RunnerEvent, SuiteResult } from "../runner/runner";
 // lookup), so they work identically under tsx and the compiled dist layout.
 
 /** Events pushed to the renderer on the runner:event channel. */
-type UiEvent = RunnerEvent | { type: "backend-log"; proc: string; line: string };
+type UiEvent =
+  | RunnerEvent
+  | { type: "backend-log"; proc: string; line: string }
+  | { type: "suites-changed"; suites: SuiteMeta[] };
 
 let win: BrowserWindow | null = null;
 
@@ -114,9 +117,32 @@ async function selfTest(): Promise<number> {
   return result.ok ? 0 : 1;
 }
 
+/**
+ * Watch harness/suites/ and push the refreshed list to the renderer (with a
+ * short debounce to coalesce write bursts). This makes suites created outside
+ * the app — e.g. by the MCP server or an editor — appear without a reload.
+ * Half-written files make listSuites() throw; that event is skipped and the
+ * next change re-emits.
+ */
+let suitesTimer: NodeJS.Timeout | null = null;
+function startSuitesWatcher(): void {
+  if (!fs.existsSync(SUITES_DIR())) return;
+  fs.watch(SUITES_DIR(), () => {
+    if (suitesTimer) clearTimeout(suitesTimer);
+    suitesTimer = setTimeout(() => {
+      try {
+        sendUi({ type: "suites-changed", suites: listSuites() });
+      } catch {
+        /* transient state; next change re-emits */
+      }
+    }, 200);
+  });
+}
+
 app.whenReady().then(async () => {
   registerIpc();
   createWindow();
+  startSuitesWatcher();
   if (process.env.HARNESS_SELF_TEST) {
     const code = await selfTest();
     app.exit(code);

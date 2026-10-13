@@ -230,7 +230,7 @@ export const META: DirMeta[] = [
     dir: "harness/src/main",
     guide: "harness/main.md",
     purpose:
-      "Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on, nodeIntegration off, sandbox on), hosts every IPC handler (suites, runner, read-only db access), and includes a headless self-test mode (HARNESS_SELF_TEST=1) that drives the real renderer through the real preload bridge.",
+      "Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on, nodeIntegration off, sandbox on), hosts every IPC handler (suites, runner, read-only db access), watches harness/suites/ and pushes list updates to the renderer, and includes a headless self-test mode (HARNESS_SELF_TEST=1) that drives the real renderer through the real preload bridge.",
     vocabulary: [
       ["preload bridge", "window.harness exposed via contextBridge in preload.ts"],
       ["IPC channels", "suite:list / suite:read / suite:run / data:files / data:query / runner:event (main.ts:48ff)"],
@@ -246,6 +246,7 @@ export const META: DirMeta[] = [
     ],
     interactions: [
       "Spawns backend processes via backend/cluster.ts; streams runner events to the renderer over runner:event.",
+      "startSuitesWatcher() (main.ts): fs.watch on harness/suites/ + 200 ms debounce pushes a suites-changed event (recomputed listSuites()) on the runner:event channel, so suites created outside the app (MCP server, editor) appear without a reload; a throw from a half-written file is skipped and re-emitted on the next change.",
     ],
   },
   {
@@ -274,10 +275,11 @@ export const META: DirMeta[] = [
     dir: "harness/src/renderer",
     guide: "harness/renderer.md",
     purpose:
-      "React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step results and the backend log), Protocol Registry (the introspected wire protocol), Database (read-only SQL against per-suite databases). State lives in a zustand store fed by the preload bridge.",
+      "React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step results and the backend log), Protocol Registry (the introspected wire protocol), Database (read-only SQL against per-suite databases). State lives in a zustand store fed by the preload bridge; the suite list auto-refreshes via the suites-changed push.",
     vocabulary: [
-      ["store", "store.ts — zustand: stepResults, suiteResults, backend log"],
+      ["store", "store.ts — zustand: suites, stepResults, suiteResults, backend log"],
       ["bridge", "window.harness.* (see preload.ts)"],
+      ["suites-changed", "store.ts handleEvent: the main process's suite-dir watcher pushes a refreshed suite list; per-suite results are kept (keyed by name)"],
     ],
     messageNotes: {},
     modificationPoints: [

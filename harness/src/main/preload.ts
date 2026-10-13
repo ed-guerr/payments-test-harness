@@ -27,7 +27,7 @@ export interface SuiteResult {
 }
 
 export interface RunnerEvent {
-  type: "suite-start" | "step-result" | "suite-result" | "done" | "backend-log";
+  type: "suite-start" | "step-result" | "suite-result" | "done" | "backend-log" | "suites-changed";
   [key: string]: unknown;
 }
 

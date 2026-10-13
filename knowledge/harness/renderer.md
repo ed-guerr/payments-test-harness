@@ -1,10 +1,10 @@
 # harness/src/renderer — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.433Z · kb-forge 0.2 · source sha256:dfb3d70f44a4
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:33:17.406Z · kb-forge 0.2 · source sha256:d9274a98be28
 
 ## Purpose
 
-React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step results and the backend log), Protocol Registry (the introspected wire protocol), Database (read-only SQL against per-suite databases). State lives in a zustand store fed by the preload bridge.
+React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step results and the backend log), Protocol Registry (the introspected wire protocol), Database (read-only SQL against per-suite databases). State lives in a zustand store fed by the preload bridge; the suite list auto-refreshes via the suites-changed push.
 
 ## Files
 
@@ -19,14 +19,15 @@ React UI (sandboxed, no Node). Three tabs: Suites (list + live run with per-step
 | /pages/RegistryPage.tsx | 74 |
 | /pages/SuiteListPage.tsx | 67 |
 | /pages/SuitePage.tsx | 114 |
-| store.ts | 73 |
+| store.ts | 81 |
 
 ## Domain vocabulary
 
 | business term | maps to |
 |---|---|
-| `store` | store.ts — zustand: stepResults, suiteResults, backend log |
+| `store` | store.ts — zustand: suites, stepResults, suiteResults, backend log |
 | `bridge` | window.harness.* (see preload.ts) |
+| `suites-changed` | store.ts handleEvent: the main process's suite-dir watcher pushes a refreshed suite list; per-suite results are kept (keyed by name) |
 
 ## Key functions
 

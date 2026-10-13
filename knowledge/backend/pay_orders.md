@@ -1,6 +1,6 @@
 # backend/src/pay_orders — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.427Z · kb-forge 0.2 · source sha256:c029293ed970
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:33:17.400Z · kb-forge 0.2 · source sha256:c029293ed970
 
 ## Purpose
 

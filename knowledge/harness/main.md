@@ -1,16 +1,16 @@
 # harness/src/main — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.431Z · kb-forge 0.2 · source sha256:00f4888067e2
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:33:17.405Z · kb-forge 0.2 · source sha256:2f5e106a4e73
 
 ## Purpose
 
-Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on, nodeIntegration off, sandbox on), hosts every IPC handler (suites, runner, read-only db access), and includes a headless self-test mode (HARNESS_SELF_TEST=1) that drives the real renderer through the real preload bridge.
+Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on, nodeIntegration off, sandbox on), hosts every IPC handler (suites, runner, read-only db access), watches harness/suites/ and pushes list updates to the renderer, and includes a headless self-test mode (HARNESS_SELF_TEST=1) that drives the real renderer through the real preload bridge.
 
 ## Files
 
 | file | ~lines |
 |---|---|
-| main.ts | 132 |
+| main.ts | 158 |
 | preload.ts | 50 |
 
 ## Domain vocabulary
@@ -25,10 +25,11 @@ Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on,
 
 | function | defined at |
 |---|---|
-| `createWindow` | main.ts:27 |
-| `sendUi(e: UiEvent)` | main.ts:43 |
-| `registerIpc` | main.ts:47 |
-| `selfTest` | main.ts:91 |
+| `createWindow` | main.ts:30 |
+| `sendUi(e: UiEvent)` | main.ts:46 |
+| `registerIpc` | main.ts:50 |
+| `selfTest` | main.ts:94 |
+| `startSuitesWatcher` | main.ts:128 |
 
 ## Common modification points
 
@@ -44,3 +45,5 @@ Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on,
 ## Inter-process interactions
 
 - Spawns backend processes via backend/cluster.ts; streams runner events to the renderer over runner:event.
+
+- startSuitesWatcher() (main.ts): fs.watch on harness/suites/ + 200 ms debounce pushes a suites-changed event (recomputed listSuites()) on the runner:event channel, so suites created outside the app (MCP server, editor) appear without a reload; a throw from a half-written file is skipped and re-emitted on the next change.
