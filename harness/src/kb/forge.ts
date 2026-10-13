@@ -23,6 +23,8 @@ import type { Registry } from "../protocol/types";
 import registryJson from "../protocol/registry.json";
 
 const KB_FORGE_VERSION = "0.2";
+/** Attribution line in every generated guide header. */
+const KB_AUTHOR = "Qwen3 (local, via pi coding agent)";
 const REPO_ROOT = (): string => path.join(packageRoot(), "..");
 const KB_DIR = (): string => path.join(REPO_ROOT(), "knowledge");
 const registry = registryJson as unknown as Registry;
@@ -203,7 +205,7 @@ export function renderGuide(ctx: DirContext, generatedAt: string): string {
   const m = ctx.meta;
   const parts: string[] = [];
   parts.push(`# ${m.dir} — Intern Guide`);
-  parts.push(`> generated ${generatedAt} · kb-forge ${KB_FORGE_VERSION} · source sha256:${ctx.sourceHash}`);
+  parts.push(`> written by ${KB_AUTHOR} · generated ${generatedAt} · kb-forge ${KB_FORGE_VERSION} · source sha256:${ctx.sourceHash}`);
   parts.push(`## Purpose`);
   parts.push(m.purpose);
   parts.push(`## Files`);

@@ -1,6 +1,6 @@
 # harness/src/runner — Intern Guide
 
-> generated 2026-10-13T01:38:34.534Z · kb-forge 0.2 · source sha256:ad000ab24871
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.429Z · kb-forge 0.2 · source sha256:ad000ab24871
 
 ## Purpose
 
@@ -40,7 +40,7 @@ The suite execution engine. Interprets suite JSON (send / dbAssert / delayMs ste
 
 | area | risk | mitigation |
 |---|---|---|
-| runner.ts | matchAck subset semantics: extra ack fields are ignored | intentional (keeps suites stable); pin new fields explicitly when they matter |
+| runner.ts | matchAck subset semantics: extra ack fields are ignored (matchAck, runner.ts:211) | intentional (keeps suites stable); pin new fields explicitly when they matter |
 | cli.ts | one fresh backend + db per suite run | suites are independent by design; shared-state tests need a new step kind |
 
 ## Inter-process interactions

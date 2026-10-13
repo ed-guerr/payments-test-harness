@@ -1,0 +1,62 @@
+{
+  "name": "transfer-800",
+  "description": "Transfer 800 cents from ACCT-001 to ACCT-002 via ledger TransferFunds; verify ack balances, both account balances, and the applied posting row",
+  "steps": [
+    {
+      "id": "send-transfer",
+      "send": {
+        "to": "ledger",
+        "msg": "TransferFunds",
+        "fields": {
+          "txn_id": 2001,
+          "from_acct": "ACCT-001",
+          "to_acct": "ACCT-002",
+          "amount_cents": 800
+        }
+      },
+      "expectAck": {
+        "status": 0,
+        "from_balance_after": 499200
+      }
+    },
+    {
+      "id": "assert-balance-from",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "ACCT-001"
+        ],
+        "expect": {
+          "balance_cents": 499200
+        }
+      }
+    },
+    {
+      "id": "assert-balance-to",
+      "dbAssert": {
+        "sql": "SELECT balance_cents FROM accounts WHERE acct = ?",
+        "params": [
+          "ACCT-002"
+        ],
+        "expect": {
+          "balance_cents": 250800
+        }
+      }
+    },
+    {
+      "id": "assert-posting",
+      "dbAssert": {
+        "sql": "SELECT from_acct, to_acct, amount_cents, status FROM ledger_entries WHERE txn_id = ?",
+        "params": [
+          2001
+        ],
+        "expect": {
+          "from_acct": "ACCT-001",
+          "to_acct": "ACCT-002",
+          "amount_cents": 800,
+          "status": "applied"
+        }
+      }
+    }
+  ]
+}

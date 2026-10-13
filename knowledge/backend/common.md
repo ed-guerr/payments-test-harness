@@ -1,6 +1,6 @@
 # backend/src/common — Intern Guide
 
-> generated 2026-10-13T01:38:34.521Z · kb-forge 0.2 · source sha256:103595b2628d
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.415Z · kb-forge 0.2 · source sha256:103595b2628d
 
 ## Purpose
 
@@ -22,11 +22,12 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 
 | business term | maps to |
 |---|---|
-| `envelope` | Envelope in include/pay/envelope.h — magic 0x5046 + msg_id + payload_len |
+| `envelope` | Envelope in include/pay/envelope.h — 8-byte header: u16 magic 0x5046 + u16 msg_id + u32 payload_len (<= PF_MAX_PAYLOAD 2048) |
 | `dispatch table` | Handlers[] in src/common/messages.c — msg_id -> function pointer |
 | `message table` | the PF_MSG_LIST X-macro lists in include/pay/messages.h |
 | `registry` | output of --introspect (src/common/introspect.c); consumed by the harness |
-| `drain client` | drain_client() in src/common/socket.c — 0 = keep connection open |
+| `drain client` | drain_client() in src/common/socket.c:114 — returns 0 = keep the connection open; non-zero closes it (server_run, socket.c:247) |
+| `ack status codes` | include/pay/ack.h — ACK_* (payment), TR_* (transfer), ST_* (settle), ERR_* (ErrorAck codes 1-5) |
 
 ## Key functions
 
@@ -71,10 +72,13 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 
 | area | risk | mitigation |
 |---|---|---|
-| socket.c | close condition: drain_client returns 0 = keep open, -1 = close; server_run closes only on != 0 | regression closes clients after every successful response; smoke test 18/19 catches it |
-| envelope.c | oversized frames (payload_len > 2048) and size mismatches | validated in decode; ErrorAck codes 3/4 |
+| socket.c | close condition: drain_client returns 0 = keep open, non-zero = close; server_run closes only on != 0 | regression closes clients after every successful response; smoke test 18/19 catches it |
+| envelope.c | oversized frames (payload_len > PF_MAX_PAYLOAD 2048) and size mismatches | validated in decode; ErrorAck codes 3 (ERR_OVERSIZED) / 4 (ERR_SIZE_MISMATCH) |
 | introspect.c | registry drift: C structs change, registry not regenerated | npm run gen:registry + suites validate against it |
+| db.c | all three processes open the SAME SQLite file (each is spawned with --db <file>; WAL mode), so a crash mid-transaction can leave a shared db in a bad state | all writes run inside explicit BEGIN IMMEDIATE ... COMMIT transactions (see db.c) |
 
 ## Inter-process interactions
 
 - Every process links this directory; handlers are pure (srv, client, envelope) functions reached only through the dispatch table.
+
+- The shared database file is the real cross-process bus: any process can read any table (auth-gateway reads payments rows directly without asking pay-orders).

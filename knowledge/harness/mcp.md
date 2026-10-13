@@ -1,6 +1,6 @@
 # harness/src/mcp — Intern Guide
 
-> generated 2026-10-13T01:38:34.537Z · kb-forge 0.2 · source sha256:93c04d5dd5d5
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.432Z · kb-forge 0.2 · source sha256:93c04d5dd5d5
 
 ## Purpose
 
@@ -19,7 +19,7 @@ The Model Context Protocol server (stdio). This is the agent-facing API: protoco
 |---|---|
 | `tool` | MCP tool = named function with zod input schema |
 | `stdio transport` | newline-delimited JSON-RPC over stdin/stdout |
-| `MCP_NO_KB` | env flag: start the server without the knowledge-base tools (A/B demo) |
+| `MCP_NO_KB` | env flag: start the server without the knowledge-base tools (A/B demo, server.ts:262) |
 
 ## Key functions
 

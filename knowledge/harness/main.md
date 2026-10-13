@@ -1,6 +1,6 @@
 # harness/src/main — Intern Guide
 
-> generated 2026-10-13T01:38:34.536Z · kb-forge 0.2 · source sha256:00f4888067e2
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.431Z · kb-forge 0.2 · source sha256:00f4888067e2
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on,
 | business term | maps to |
 |---|---|
 | `preload bridge` | window.harness exposed via contextBridge in preload.ts |
-| `IPC channels` | suite:list / suite:read / suite:run / data:files / data:query / runner:event |
+| `IPC channels` | suite:list / suite:read / suite:run / data:files / data:query / runner:event (main.ts:48ff) |
 | `self-test` | HARNESS_SELF_TEST=1 npm start — e2e verification without a human |
 
 ## Key functions

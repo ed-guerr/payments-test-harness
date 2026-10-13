@@ -1,6 +1,6 @@
 # backend/src/pay_orders — Intern Guide
 
-> generated 2026-10-13T01:38:34.532Z · kb-forge 0.2 · source sha256:c029293ed970
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T02:23:53.427Z · kb-forge 0.2 · source sha256:c029293ed970
 
 ## Purpose
 
@@ -18,7 +18,7 @@ Payment lifecycle owner. Serves :9101. Creates, cancels, and completes payment r
 
 | business term | maps to |
 |---|---|
-| `payment` | row in payments table; status: open -> complete \| open -> cancelled |
+| `payment` | row in payments table; status: open -> complete \| open -> cancelled \| complete -> settled |
 | `create payment` | CreatePayment (10) -> PaymentAck (20) |
 | `cancel payment` | CancelPayment (11); allowed only while status = open |
 | `complete payment` | CompletePayment (12); forwarded here by auth-gateway after approval |
@@ -27,10 +27,10 @@ Payment lifecycle owner. Serves :9101. Creates, cancels, and completes payment r
 
 | message | dir | precondition | side effect |
 |---|---|---|---|
-| `CreatePayment` (10) | in | account exists in accounts table | INSERT payments (status open); ledger TransferFunds acct->RESERVE is NOT done here (settlement moves funds) |
-| `CancelPayment` (11) | in | payments row exists and status = open | status -> cancelled |
+| `CreatePayment` (10) | in | account exists in accounts table; txn_id unused (duplicate -> ack status 2) | INSERT payments (status open); ledger TransferFunds acct->RESERVE is NOT done here (settlement moves funds) |
+| `CancelPayment` (11) | in | payments row exists and status = open | status -> cancelled (conditional UPDATE in db_payment_set_status) |
 | `CompletePayment` (12) | in | payments row exists and status = open | status -> complete; this is what auth-gateway forwards after a successful Authorize |
-| `PaymentAck` (20) | out | response to 10/11/12 | none (status 0 = ok, 1 = rejected) |
+| `PaymentAck` (20) | out | response to 10/11/12 | none (status: 0 ok, 1 account not found, 2 duplicate txn, 3 invalid — include/pay/ack.h) |
 | `ErrorAck` (255) | out | — | — |
 
 ## Key functions
@@ -51,7 +51,7 @@ Payment lifecycle owner. Serves :9101. Creates, cancels, and completes payment r
 
 | area | risk | mitigation |
 |---|---|---|
-| handlers.c | status transitions are enforced only in handlers, not by DB constraints | dbAssert steps in suites pin the expected status after each transition |
+| handlers.c + db.c | status transitions are enforced by conditional UPDATEs (db_payment_set_status matches the current status), not by a DB CHECK constraint | dbAssert steps in suites pin the expected status after each transition |
 | main.c | listens on 9101; auth-gateway hard-codes this port for forwarding | keep ports stable or update forward.c |
 
 ## Inter-process interactions
