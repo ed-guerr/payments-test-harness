@@ -1,6 +1,6 @@
 # The demo GIF — how it was made
 
-`docs/demo.gif` is a ~51-second recording (half speed: 253 frames at 5fps, 1000px)
+`docs/demo.gif` is a ~47-second recording (half speed: 236 frames at 5fps, 1000px)
 of the real, compiled app plus a
 real `pi` session (a local LLM via llama.cpp) that authors and runs a test
 suite through the harness MCP server. Nothing is scripted at the UI level —
@@ -13,7 +13,7 @@ frames are tmux captures of a live agent session.
 2. Terminal: `pi --provider llamacpp --model qwen3` boots, receives the
    prompt, calls `kb_search` → `get_message_schema` → `create_suite` →
    `run_suite` (the MCP tool calls are visible), ends with its summary
-   (10/10 green)
+   (all steps green)
 3. Back in the app: the suite has appeared in the list; open it, run it
    (slow motion), results page
 4. `ledger-chaos-kill`: run (slow motion), expand the `read ECONNRESET` row
@@ -37,14 +37,14 @@ cd harness && npx electron scripts/demo-gif/record-app-segments.js
 #    -> /tmp/app-frames/fNNNN.png
 
 # 2. Terminal: capture a real pi session (prompt = create + run a
-#    no-double-settle test). Deletes the target suite first if you want the
-#    "it appeared" moment to be genuine: rm harness/suites/no-double-settle.json
+#    no-double-settle test; the name is pinned so the terminal and the app
+#    segments tell the same story)
 python3 scripts/demo-gif/capture_pi.py \
-  "Use the harness MCP tools to create and run a test suite that verifies a payment cannot be settled twice. The tools (kb_search, get_message_schema, create_suite, run_suite) live on the mcp__harness MCP server: call them from codemode scripts as tools.mcp__harness__kb_search(...) and so on. Do not ask me questions — if something fails, work around it and continue. Keep the suite minimal. In your final message, summarize with short plain lines (one per step, under 90 characters), no markdown tables."
+  "Use the harness MCP tools to create and run a test suite that verifies a payment cannot be settled twice. Name the suite no-double-settle. The tools (kb_search, get_message_schema, create_suite, run_suite) live on the mcp__harness MCP server: call them from codemode scripts as tools.mcp__harness__kb_search(...) and so on. Do not ask me questions — if something fails, work around it and continue. Keep the suite minimal. In your final message, summarize with short plain lines (one per step, under 90 characters), no markdown tables."
 #    (the prompt points the model at the codemode — where the MCP tools are
 #     reachable — and forbids ask_user_question, which would stall the
 #     capture waiting for input)
-#    -> /tmp/pi-frames/fNNNN.ansi   (≈ 55–60s of real time)
+#    -> /tmp/pi-frames/fNNNN.ansi   (≈ 30–60s of real time, model-dependent)
 
 # 3. Render the ANSI frames to PNG (scale 2 = 2x supersampled text)
 python3 scripts/demo-gif/render_pi.py /tmp/pi-frames 180 45 2
@@ -63,6 +63,7 @@ ffmpeg -framerate 5 -i /tmp/final-frames/g%04d.png -i /tmp/pal.png \
 
 Notes:
 
+- **Capture from a copy of the repo at a neutral path** (e.g. `cp -R . /private/tmp/demo-harness` and run every step in the copy): pi's status bar shows the cwd, and agent tool output can contain absolute paths. Recording in a personal checkout bakes `/Users/<you>/...` into the GIF.
 - `--thinking off` keeps the capture clean: without it, pi's TUI renders the
   model's thinking as a staggered cascade that reads as jumbled text in the
   GIF. The compact-summary instruction keeps the final message from producing
@@ -70,12 +71,15 @@ Notes:
 - render_pi.py converts the capture's bare-LF row endings to CRLF before
   replaying them through pyte — without that, rows of differing length drift
   rightward and the terminal looks jumbled too.
-- The terminal capture sends the prompt after 9s (TUI + MCP boot) and stops
-  when the screen is idle for 4s after the 20s mark, then holds 2.5s.
+- The terminal capture waits for the TUI boot to settle (screen quiet 3s,
+  then another 2s) before sending the prompt — a fixed delay drops the
+  keystrokes on slow boots — and verifies the prompt text appears on screen,
+  resending once after 8 s if it did not. It stops when the screen is idle
+  for 4 s after the 20 s mark, then holds 2.5 s.
 - The compose step drops unchanged frames and subsamples each segment to a
   target duration; static holds are essentially free in GIF size, changed
-  frames are the cost. 1000px ≈ 5 MB at 51s half speed (the same frames at
-  720px are ≈ 2.8 MB; 1280px ≈ 7 MB). dither=none is correct for this
+  frames are the cost. 1000px ≈ 3.6 MB at 47s half speed. dither=none is
+  correct for this
   flat dark UI — Bayer dithering just adds grain and bloats the file.
 - `record-app-segments.js` moves the `no-double-settle.json` suite file
   aside for the "before" list and back for the "after" list — that is the

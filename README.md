@@ -352,7 +352,7 @@ docs/
   eval.md             the KB on/off evaluation methodology (npm run eval)
   protocol.md · mcp.md · knowledge.md
   designs/          sample designer output (KB-grounded vs schema-only pair)
-  demo.gif          the ~51s half-speed demo (linked at the top of the
+  demo.gif          the ~47s half-speed demo (linked at the top of the
                     README; regenerate with the harness/scripts/demo-gif/
                     pipeline)
 ```

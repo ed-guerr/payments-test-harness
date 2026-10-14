@@ -27,7 +27,13 @@ COLS, ROWS = 180, 45
 IDLE_S = 4.0
 HOLD_S = 2.5
 MIN_ELAPSED_S = 20.0
-PROMPT_AT_S = 9.0  # let the TUI + MCP server finish booting before typing
+PROMPT_AT_S = None  # adaptive: send once the TUI boot has settled (quiet screen)
+BOOT_QUIET_S = 3.0   # screen quiet this long => boot done
+SEND_SETTLE_S = 2.0  # ...and quiet this much longer => send the prompt
+# any of these substrings on screen => the prompt landed (phrases can be
+# split by line-wrap, so several candidates)
+PROMPT_PROBE = ("cannot be settled", "no markdown tables", "Keep the suite minimal")
+RESEND_S = 8.0
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PROJECT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
@@ -58,8 +64,11 @@ def main() -> None:
     start = time.time()
     n = 0
     prompt_sent = False
+    prompt_seen = False
+    sent_at = 0.0
     last = None
     last_change = time.time()
+    quiet_since = None
     hold_start = None
     next_t = time.time()
 
@@ -70,15 +79,29 @@ def main() -> None:
         n += 1
         now = time.time()
 
-        if not prompt_sent and now - start >= PROMPT_AT_S:
+        if prompt_sent and not prompt_seen and any(p in out for p in PROMPT_PROBE):
+            prompt_seen = True
+            print(f"prompt landed at {now - start:.1f}s")
+        if prompt_sent and not prompt_seen and now - sent_at >= RESEND_S:
             tmux("send-keys", "-t", SESSION, PROMPT, "Enter")
-            prompt_sent = True
+            sent_at = now
             last_change = now
-            print(f"prompt sent at {now - start:.1f}s")
+            print(f"prompt resent at {now - start:.1f}s (not visible yet)")
+        if not prompt_sent:
+            if now - last_change >= BOOT_QUIET_S:
+                if quiet_since is None:
+                    quiet_since = now
+                elif now - quiet_since >= SEND_SETTLE_S:
+                    tmux("send-keys", "-t", SESSION, PROMPT, "Enter")
+                    prompt_sent = True
+                    sent_at = now
+                    last_change = now
+                    print(f"boot settled; prompt sent at {now - start:.1f}s")
 
         if out != last:
             last_change = now
             hold_start = None
+            quiet_since = None
         last = out
 
         if prompt_sent and now - start > MIN_ELAPSED_S and hold_start is None and now - last_change >= IDLE_S:
