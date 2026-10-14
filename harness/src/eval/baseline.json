@@ -10,6 +10,11 @@
       "source": "full eval run 2026-10-13 — Gemma-4-12B QAT Q4_0 via llama.cpp (LAN, port 8082), temp 0, 3 runs/task. Model id is the GGUF path the single-model llama.cpp server reports",
       "kb": { "pass": 12, "total": 33 },
       "no_kb": { "pass": 8, "total": 33 }
+    },
+    "gpt-6-luna": {
+      "source": "full eval run 2026-10-14 — gpt-6-luna via OpenAI /v1/chat/completions, temp 0, 3 runs/task. The endpoint forces reasoning_effort \"none\" for function tools, so this model is baselined with reasoning off — a Responses-API run (reasoning on) is a different configuration and should be re-baselined deliberately",
+      "kb": { "pass": 20, "total": 33 },
+      "no_kb": { "pass": 22, "total": 33 }
     }
   }
 }

@@ -163,16 +163,19 @@ npm run eval:smoke            # 3 tasks x 1 run x both variants
 npm run eval                  # 11 tasks x 3 runs x both variants
 ```
 
-Committed results — both models via llama.cpp on a LAN GPU box, 3 runs per
-task, temperature 0. Trimmed full-fidelity samples (agent-authored suites
-intact, tool results truncated) in
-[`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json) and
+Committed results — two local models via llama.cpp on a LAN GPU box plus one
+hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0.
+Trimmed full-fidelity samples (agent-authored suites intact, tool results
+truncated) in [`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json),
+[`sample-gpt-6-luna.json`](harness/eval-reports/sample-gpt-6-luna.json), and
 [`sample-gemma-12b.json`](harness/eval-reports/sample-gemma-12b.json):
 
 | model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) |
 |---|---|---|---|---|---|---|---|
 | **Qwen3.8-27B Q4_K_M** (the GIF's model) | **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 |
 | Qwen3.8-27B Q4_K_M | kb-off | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 |
+| gpt-6-luna (hosted, OpenAI) | kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 |
+| gpt-6-luna (hosted, OpenAI) | kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 |
 | Gemma-4-12B QAT Q4_0 | **kb-on** | **12/33** | 21/33 | 15/33 | 14.4 | 0.9 | 14 |
 | Gemma-4-12B QAT Q4_0 | kb-off | 8/33 | 14/33 | 8/33 | 18.1 | 0.8 | 50 |
 
@@ -183,6 +186,17 @@ efficiency to pass-or-fail as the model gets weaker**:
   as *efficiency* — one-shot suites (1.0 vs 1.3 re-runs), fewer tool calls
   (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
   class of miss the KB exists to prevent.
+- **gpt-6-luna (hosted frontier):** pass rate is a wash (20 vs 22, within
+  run noise) — a strong model infers the protocol from introspection alone.
+  But on the two KB-sensitive tasks the KB still pays (3/3 vs 1/3 on
+  `gateway-forward-completes`, 3/3 vs 2/3 on `settle-moves-money`), and the
+  failure mode changes shape: instead of exhausting the 25-step tool budget
+  (Gemma's miss), it writes a *functionally correct* suite that drops one
+  ground-truth assertion — `happy-path` kb-on is 0/3 on a single missing
+  `Settle` ack check, all three runs. Two caveats, stated plainly: the
+  `/chat/completions` endpoint forces `reasoning_effort: "none"` for function
+  tools, so this row is the model *with reasoning off*, and the full 66-run
+  eval cost ~$0.35 at $0.10/$0.50 per M tokens.
 - **Gemma-4-12B (weaker):** the value shows in the *pass rate itself* —
   12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
   p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs

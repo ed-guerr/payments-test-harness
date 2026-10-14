@@ -94,6 +94,18 @@ export class Agent {
     function: { name: string; description: string; parameters: Record<string, unknown> };
   }[] = [];
 
+  // Hosted APIs (e.g. OpenAI) reject the Qwen-only chat_template_kwargs
+  // parameter with a 400. If the endpoint answers that, remember it and
+  // retry without the parameter — local llama.cpp servers keep the
+  // thinking-off default unchanged.
+  private chatTemplateKwargsBlocked = false;
+
+  // Reasoning models (gpt-6-luna) refuse function tools in
+  // /chat/completions unless reasoning is explicitly off; the 400 names the
+  // fix, so remember it and retry with reasoning_effort: "none". Non-
+  // reasoning models and llama.cpp never see the parameter.
+  private reasoningEffortNone = false;
+
   constructor(
     private cfg: AgentConfig,
     private mcp: Client,
@@ -116,22 +128,32 @@ export class Agent {
     const base = this.cfg.apiBase.replace(/\/+$/, "");
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (this.cfg.apiKey) headers.authorization = `Bearer ${this.cfg.apiKey}`;
-    const res = await fetch(`${base}/chat/completions`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: this.cfg.model,
-        messages,
-        tools: this.tools,
-        temperature: this.cfg.temperature,
-        // Qwen3 chat template: disable reasoning tokens. Ignored by servers
-        // that don't know it; set EVAL_THINKING=1 to turn reasoning on.
-        ...(process.env.EVAL_THINKING === "1" ? {} : { chat_template_kwargs: { enable_thinking: false } }),
-      }),
+    const body = JSON.stringify({
+      model: this.cfg.model,
+      messages,
+      tools: this.tools,
+      temperature: this.cfg.temperature,
+      // Qwen3 chat template: disable reasoning tokens. Set EVAL_THINKING=1 to
+      // turn reasoning on. Endpoints that reject the parameter (OpenAI)
+      // trigger the 400 retry below, which drops it for this and all
+      // subsequent calls.
+      ...(this.chatTemplateKwargsBlocked || process.env.EVAL_THINKING === "1"
+        ? {}
+        : { chat_template_kwargs: { enable_thinking: false } }),
+      ...(this.reasoningEffortNone ? { reasoning_effort: "none" } : {}),
     });
+    const res = await fetch(`${base}/chat/completions`, { method: "POST", headers, body });
     if (!res.ok) {
-      const body = (await res.text()).slice(0, 500);
-      throw new Error(`chat API ${res.status} from ${base}: ${body}`);
+      const errText = (await res.text()).slice(0, 500);
+      if (res.status === 400 && !this.chatTemplateKwargsBlocked && errText.includes("chat_template_kwargs")) {
+        this.chatTemplateKwargsBlocked = true;
+        return this.chat(messages); // at most one retry: the flag is now set
+      }
+      if (res.status === 400 && !this.reasoningEffortNone && errText.includes("reasoning_effort")) {
+        this.reasoningEffortNone = true;
+        return this.chat(messages); // at most one retry: the flag is now set
+      }
+      throw new Error(`chat API ${res.status} from ${base}: ${errText}`);
     }
     return (await res.json()) as ChatResponse;
   }

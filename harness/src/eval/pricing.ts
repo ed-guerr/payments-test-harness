@@ -14,6 +14,9 @@ const PRICING: Record<string, { inUsdPerM: number; outUsdPerM: number }> = {
   local: { inUsdPerM: 0, outUsdPerM: 0 },
   "google/gemma-4-12b-qat": { inUsdPerM: 0, outUsdPerM: 0 },
   // hosted examples (update deliberately)
+  // gpt-6-luna: base tier (per-M at 272k context); the >272k tier (0.2/0.75)
+  // never applies — a single eval run is far below one context window.
+  "gpt-6-luna": { inUsdPerM: 0.1, outUsdPerM: 0.5 },
   "gpt-4o": { inUsdPerM: 2.5, outUsdPerM: 10 },
   "gpt-4o-mini": { inUsdPerM: 0.15, outUsdPerM: 0.6 },
   "claude-sonnet-4-5": { inUsdPerM: 3, outUsdPerM: 15 },
