@@ -170,14 +170,14 @@ truncated) in [`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.js
 [`sample-gpt-6-luna.json`](harness/eval-reports/sample-gpt-6-luna.json), and
 [`sample-gemma-12b.json`](harness/eval-reports/sample-gemma-12b.json):
 
-| model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) |
-|---|---|---|---|---|---|---|---|
-| **Qwen3.8-27B Q4_K_M** (the GIF's model) | **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 |
-| Qwen3.8-27B Q4_K_M | kb-off | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 |
-| gpt-6-luna (hosted, OpenAI) | kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 |
-| gpt-6-luna (hosted, OpenAI) | kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 |
-| Gemma-4-12B QAT Q4_0 | **kb-on** | **12/33** | 21/33 | 15/33 | 14.4 | 0.9 | 14 |
-| Gemma-4-12B QAT Q4_0 | kb-off | 8/33 | 14/33 | 8/33 | 18.1 | 0.8 | 50 |
+| model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) |
+|---|---|---|---|---|---|---|---|---|---|
+| **Qwen3.8-27B Q4_K_M** (the GIF's model) | **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 | 53,285 / 1,098 | 0.0000 |
+| Qwen3.8-27B Q4_K_M | kb-off | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 | 48,993 / 1,311 | 0.0000 |
+| gpt-6-luna (hosted, OpenAI) | kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 | 35,298 / 809 | 0.0039 |
+| gpt-6-luna (hosted, OpenAI) | kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 | 58,118 / 955 | 0.0063 |
+| Gemma-4-12B QAT Q4_0 | **kb-on** | **12/33** | 21/33 | 15/33 | 14.4 | 0.9 | 14 | 87,127 / 2,555 | n/a |
+| Gemma-4-12B QAT Q4_0 | kb-off | 8/33 | 14/33 | 8/33 | 18.1 | 0.8 | 50 | 96,361 / 4,122 | n/a |
 
 What the numbers say, honestly — the KB's measurable value **moves from
 efficiency to pass-or-fail as the model gets weaker**:

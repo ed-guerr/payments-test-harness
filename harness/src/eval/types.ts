@@ -109,8 +109,13 @@ export interface VariantSummary {
   p50WallS: number;
   tokensIn: number;
   tokensOut: number;
+  /** per-run averages of tokensIn / tokensOut */
+  avgTokensIn: number;
+  avgTokensOut: number;
   /** sum of per-run costUsd; null when the model has no committed price */
   costUsd: number | null;
+  /** per-run average cost; null when the model has no committed price */
+  avgCostUsd: number | null;
   perTask: { taskId: string; kbSensitive: boolean; pass: number; of: number }[];
 }
 

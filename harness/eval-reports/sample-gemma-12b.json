@@ -53701,7 +53701,10 @@
       "p50WallS": 14,
       "tokensIn": 2875205,
       "tokensOut": 84316,
+      "avgTokensIn": 87127,
+      "avgTokensOut": 2555,
       "costUsd": null,
+      "avgCostUsd": null,
       "perTask": [
         {
           "taskId": "happy-path",
@@ -53782,7 +53785,10 @@
       "p50WallS": 50,
       "tokensIn": 3179911,
       "tokensOut": 136026,
+      "avgTokensIn": 96361,
+      "avgTokensOut": 4122,
       "costUsd": null,
+      "avgCostUsd": null,
       "perTask": [
         {
           "taskId": "happy-path",

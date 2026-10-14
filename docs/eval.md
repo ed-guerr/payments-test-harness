@@ -118,8 +118,10 @@ Reports land in `harness/eval-reports/` (gitignored, except committed
 | checklist full | all ground-truth items present in the suite JSON |
 | avg tool calls | efficiency of the agent loop |
 | p50 wall | median wall time, agent loop + independent re-run |
-| tokens in / out | summed across runs (from the model server's usage) |
-| cost (usd) | per-run cost from the committed price table
+| avg tokens in/out (per run) | mean prompt/completion tokens per agent run (from the model server's usage) |
+| avg cost (usd/run) | mean cost per agent run from the committed price table; `n/a` when the model has no committed price — never a guess |
+| total tokens in / out | summed across runs (from the model server's usage) |
+| total cost (usd) | summed per-run cost from the committed price table
   (`src/eval/pricing.ts`, keyed by model id); GGUF path ids are treated as
   local ($0.00); `n/a` when the model has no committed price — never a guess |
 
@@ -162,7 +164,7 @@ Interpretation rules:
 Local 27B (Q4, remote Metal box): a smoke run (6 agent runs) takes roughly
 5–15 minutes; a full run (66 agent runs) took **≈ 17 minutes** on the LAN
 llama.cpp server for the committed result. There is no API cost for a local
-model (the report's `cost (usd)` column is 0.0000 from the committed price
+model (the report's `total cost (usd)` column is 0.0000 from the committed price
 table in `src/eval/pricing.ts`); for hosted providers that column is what
 you bill against, and an unpriced model reports `n/a` rather than a guess.
 

@@ -35,8 +35,13 @@ export function summarize(runs: TaskRunRecord[]): VariantSummary[] {
       p50WallS: Math.round(median(vr.map((r) => r.totalWallMs)) / 1000),
       tokensIn: vr.reduce((a, r) => a + r.tokensIn, 0),
       tokensOut: vr.reduce((a, r) => a + r.tokensOut, 0),
+      avgTokensIn: vr.length ? Math.round(vr.reduce((a, r) => a + r.tokensIn, 0) / vr.length) : 0,
+      avgTokensOut: vr.length ? Math.round(vr.reduce((a, r) => a + r.tokensOut, 0) / vr.length) : 0,
       // null when the model has no committed price (never a guess)
       costUsd: vr.some((r) => r.costUsd === null) ? null : Math.round(vr.reduce((a, r) => a + (r.costUsd ?? 0), 0) * 10000) / 10000,
+      avgCostUsd: vr.length && !vr.some((r) => r.costUsd === null)
+        ? Math.round((vr.reduce((a, r) => a + (r.costUsd ?? 0), 0) / vr.length) * 1e6) / 1e6
+        : null,
       perTask: taskIds.map((taskId) => {
         const tr = vr.filter((r) => r.taskId === taskId);
         return {
@@ -57,12 +62,14 @@ export function toMarkdown(report: EvalReport): string {
   out.push(`generated ${report.generatedAt} · ${report.config.runsPerTask} run(s)/task · ` +
     `temperature ${report.config.temperature} · max ${report.config.maxToolSteps} tool steps`);
   out.push("");
-  out.push("| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | tokens in / out | cost (usd) |");
-  out.push("|---|---|---|---|---|---|---|---|---|");
+  out.push("| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) | total tokens in/out | total cost (usd) |");
+  out.push("|---|---|---|---|---|---|---|---|---|---|---|");
   for (const s of report.summary) {
     out.push(
       `| ${s.variant} | ${s.pass}/${s.runs} | ${s.suiteGreen}/${s.runs} | ${s.checklistFull}/${s.runs} | ` +
-        `${s.avgToolCalls} | ${s.avgSuiteRuns} | ${s.p50WallS} | ${s.tokensIn} / ${s.tokensOut} | ${s.costUsd === null ? "n/a" : s.costUsd.toFixed(4)} |`,
+        `${s.avgToolCalls} | ${s.avgSuiteRuns} | ${s.p50WallS} | ${s.avgTokensIn} / ${s.avgTokensOut} | ` +
+        `${s.avgCostUsd === null ? "n/a" : s.avgCostUsd.toFixed(4)} | ${s.tokensIn} / ${s.tokensOut} | ` +
+        `${s.costUsd === null ? "n/a" : s.costUsd.toFixed(4)} |`,
     );
   }
   for (const s of report.summary) {

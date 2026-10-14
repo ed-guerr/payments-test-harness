@@ -2,10 +2,10 @@
 
 generated 2026-10-14T03:58:18.736Z · 3 run(s)/task · temperature 0 · max 25 tool steps
 
-| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | tokens in / out | cost (usd) |
-|---|---|---|---|---|---|---|---|---|
-| kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 | 1164849 / 26702 | 0.1298 |
-| kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 | 1917879 / 31503 | 0.2076 |
+| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) | total tokens in/out | total cost (usd) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 | 35298 / 809 | 0.0039 | 1164849 / 26702 | 0.1298 |
+| kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 | 58118 / 955 | 0.0063 | 1917879 / 31503 | 0.2076 |
 
 ## per-task — kb-on
 
