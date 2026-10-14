@@ -95,9 +95,12 @@ export interface RunnerOptions {
   /** Chaos: kill a backend process mid-suite. True if a live process was killed. */
   killProcess?: (proc: string, signal: NodeJS.Signals) => boolean;
   /**
-   * Each finished run also writes a self-contained HTML report to
-   * <reportsDir>/<suite>_<ts>.html. Defaults to <repo>/docs/test-runs;
-   * pass "" to disable.
+   * Where each finished run's self-contained HTML report goes
+   * (<reportsDir>/<suite>_<ts>.html). Resolution: this option if set
+   * ("" disables); otherwise the HARNESS_HTML_REPORTS env var — "1"
+   * enables the default <repo>/docs/test-runs, anything else (including
+   * unset) writes nothing. HTML reports are off by default; the run JSON
+   * in runsDir is written regardless.
    */
   reportsDir?: string;
 }
@@ -161,13 +164,19 @@ export class Runner {
     ts: string,
     at: string,
   ): void {
-    const dir = this.opts.reportsDir ?? REPORTS_DIR();
+    const dir = this.resolveReportsDir();
     if (!dir) return;
     try {
       writeHtmlReport({ suite, result, steps, at }, dir, ts);
     } catch {
       // reports are best-effort; never fail a run because of them
     }
+  }
+
+  /** Explicit option wins; otherwise opt-in via HARNESS_HTML_REPORTS=1. */
+  private resolveReportsDir(): string {
+    if (this.opts.reportsDir !== undefined) return this.opts.reportsDir;
+    return process.env.HARNESS_HTML_REPORTS === "1" ? REPORTS_DIR() : "";
   }
 
   /** Latest persisted run for a suite (or the latest overall when name is null). */

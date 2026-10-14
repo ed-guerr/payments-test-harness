@@ -1,6 +1,6 @@
 # harness/src/protocol — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T18:10:00.453Z · kb-forge 0.2 · source sha256:bb9d9b834c74
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-14T00:29:47.442Z · kb-forge 0.2 · source sha256:bb9d9b834c74
 
 ## Purpose
 

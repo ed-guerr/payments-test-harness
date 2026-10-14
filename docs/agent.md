@@ -24,9 +24,10 @@ Every agent-authored artifact must be:
    (`harness/suites/*.json`, 8 committed). The same file runs identically in
    the Electron UI, the headless CLI (`src/runner/cli.ts`), the MCP server,
    and the eval — one runner (`src/runner/runner.ts`), no UI dependency.
-3. **Explainable.** A red run produces an HTML report with per-step
-   expected-vs-actual for the failing assertion (`src/runner/report.ts`,
-   pinned by `src/runner/report.test.ts`). A failed validation returns the
+3. **Explainable.** A red run can produce an HTML report with per-step
+   expected-vs-actual for the failing assertion
+   (`src/runner/report.ts`, pinned by `src/runner/report.test.ts`; opt in
+   with `HARNESS_HTML_REPORTS=1`, off by default). A failed validation returns the
    offending message plus KB hints (see §3). Nothing in the loop requires
    trusting the agent's narrative.
 

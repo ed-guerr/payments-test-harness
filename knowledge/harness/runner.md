@@ -1,6 +1,6 @@
 # harness/src/runner — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-13T18:10:00.451Z · kb-forge 0.2 · source sha256:9979fbeab5eb
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-14T00:29:47.440Z · kb-forge 0.2 · source sha256:06e2c80df7e6
 
 ## Purpose
 
@@ -14,7 +14,7 @@ The suite execution engine. Interprets suite JSON (send / dbAssert / delayMs ste
 | matchAck.test.ts | 24 |
 | report.test.ts | 48 |
 | report.ts | 537 |
-| runner.ts | 336 |
+| runner.ts | 345 |
 
 ## Domain vocabulary
 
@@ -41,8 +41,8 @@ The suite execution engine. Interprets suite JSON (send / dbAssert / delayMs ste
 | `stepRows(step: Step, r: StepResult & StepTiming)` | report.ts:167 |
 | `timelineRows(suite: Suite, steps: (StepResult & StepTiming)` | report.ts:208 |
 | `renderHtmlReport(input: ReportInput)` | report.ts:309 |
-| `Runner` | runner.ts:105 |
-| `sleep(ms: number)` | runner.ts:333 |
+| `Runner` | runner.ts:108 |
+| `sleep(ms: number)` | runner.ts:342 |
 
 ## Common modification points
 

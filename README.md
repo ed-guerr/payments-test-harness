@@ -258,10 +258,20 @@ typed failure, verifies state is exactly pre-kill), and
 npm run run:cli -- suites/insufficient-funds.json
 ```
 
-Every run — from the app, the CLI, or the MCP server — also writes a
-self-contained **HTML report** to `docs/test-runs/<suite>_<timestamp>.html`
-(styled like the app, dark by default): each step's action, pass/fail
-status, and assertions with expected vs actual — mismatches highlighted.
+Every run persists a machine-readable result JSON to `harness/runs/`
+(gitignored). If you want shareable **proof of what a run actually did** —
+a self-contained HTML report styled like the app, with each step's action,
+pass/fail status, assertions (expected vs actual, mismatches highlighted),
+and a timing waterfall — opt in with `HARNESS_HTML_REPORTS=1`:
+
+```bash
+HARNESS_HTML_REPORTS=1 npm run run:cli -- suites/insufficient-funds.json
+# → docs/test-runs/insufficient-funds_<timestamp>.html
+```
+
+Reports are off by default so routine runs (and the 66-run eval) don't
+litter the tree; flip the flag when you want an artifact of a run to
+attach to a bug report or a review.
 
 ## Knowledge pipeline
 
