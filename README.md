@@ -248,7 +248,8 @@ above is that session, unedited):
 - `delayMs` — pacing across fire-and-forget inter-process forwards.
 - `killProcess` — chaos: SIGKILL/SIGTERM a backend process mid-run.
 
-Seven suites are committed: `payment-happy-path` (10/10 green),
+Seven more suites are committed (eight in total, including the LLM-
+authored one): `payment-happy-path` (10/10 green),
 `ledger-chain-reversals` (22 steps), `insufficient-funds`, `cancel-payment`,
 `transfer-800`, `ledger-chaos-kill` (kills the ledger mid-run, asserts the
 typed failure, verifies state is exactly pre-kill), and
