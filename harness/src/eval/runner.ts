@@ -28,7 +28,8 @@ import { costUsd } from "./pricing";
 import { SYSTEM_PROMPT, taskUserPrompt } from "./prompt";
 import type { EvalConfig, EvalReport, EvalTask, TaskRunRecord, Variant } from "./types";
 import { judgeSuite } from "./judge";
-import { summarize } from "./report";
+import { buildManifest, sha256Hex, stableJson } from "./manifest";
+import { classifyFailure, summarize } from "./report";
 
 const EVAL_REPORTS_DIR = (): string => path.join(packageRoot(), "eval-reports");
 
@@ -130,6 +131,7 @@ async function runTask(
     checks: [],
     checklistFull: false,
     pass: false,
+    failureReason: null,
     trace: [],
   };
   try {
@@ -187,13 +189,25 @@ async function runTask(
 }
 
 export async function runEval(rt: EvalRuntime): Promise<EvalReport> {
+  const startedAt = new Date().toISOString();
   const runs: TaskRunRecord[] = [];
+  const toolSurface: { variant: Variant; tools: number; hash: string }[] = [];
   for (const variant of rt.config.variants) {
     const client = await spawnMcpServer(variant);
     try {
+      // Record the exact model-visible tool surface for this condition before
+      // any run — content-off rewrites are included, so the hash captures what
+      // the model actually saw, not just what the server registered.
+      const probe = new Agent(rt.agentCfg, client, {
+        kbAblation: variant === "kb-content-off" ? "content-only" : "enabled",
+      });
+      await probe.discoverTools();
+      const surface = probe.toolSurface();
+      toolSurface.push({ variant, tools: surface.length, hash: sha256Hex(stableJson(surface)) });
       for (const task of rt.tasks) {
         for (let run = 1; run <= rt.config.runsPerTask; run++) {
           const rec = await runTask(rt, client, task, variant, run);
+          rec.failureReason = classifyFailure(rec);
           runs.push(rec);
           const wall = (rec.totalWallMs / 1000).toFixed(0);
           const checks = `${rec.checks.filter((c) => c.ok).length}/${rec.checks.length}`;
@@ -213,5 +227,6 @@ export async function runEval(rt: EvalRuntime): Promise<EvalReport> {
     config: rt.config,
     runs,
     summary: summarize(runs),
+    manifest: buildManifest(rt.config, rt.tasks, startedAt, toolSurface),
   };
 }

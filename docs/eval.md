@@ -114,12 +114,28 @@ Reports land in `harness/eval-reports/` (gitignored, except committed
 `sample-*`):
 
 - `<stamp>-<model>.json` — full report: config, every run with the complete
-  tool-call trace, per-run checklist details, variant summaries.
+  tool-call trace, per-run checklist details and failure cause, variant
+  summaries, and the experiment manifest.
 - `<stamp>-<model>.md` — the summary table (what the README quotes).
+
+The JSON's `manifest` block is the run's identity: start time and run
+order, sha256 hashes of the config, system prompt, and task set, the
+model-visible tool surface per condition (the content-off rewrite is part
+of what the model saw, so it is in the hash), the KB manifest and
+wire-protocol registry, and the repo revision. Two reports with identical
+manifests ran identical experiments; a differing hash tells you what
+changed.
+
+Every attempt stays in the denominator. Each non-passing run carries a
+`failureReason` — `agent-error` (API/malformed call), `timeout`,
+`step-budget` (max tool steps exhausted), `no-suite`, `suite-red`
+(independent re-run failed), or `checklist-missing` — and summaries group
+failures by cause, so nothing is silently dropped.
 
 | column | meaning |
 |---|---|
 | pass | suite created + green + full checklist (the score) |
+| 95% CI (pass) | Wilson score interval for pass/runs — uncertainty over repeated runs of this fixed setup, not a general estimate; stays inside 0–100% even for small n |
 | suite green | the generated suite runs 100% (independent re-run) |
 | checklist full | all ground-truth items present in the suite JSON |
 | avg tool calls | efficiency of the agent loop |
@@ -148,6 +164,11 @@ Interpretation rules:
   broken or the KB row is stale — fix the artifact, never the number.
 - Numbers are from **3 runs per task** (temperature 0 is not determinism on
   a quantized local model); report distributions, never a single run.
+  The report's `distributions` rows (min/p50/p95 across all attempts) and
+  the per-category tables exist for exactly this: look at the spread and the
+  strata, not the headline cell.
+- A close gap inside the CI (e.g. 33/33 vs 32/33) is **inconclusive**, not a
+  win or a regression — say so in prose instead of picking a winner.
 - A model change is an experiment change: the committed sample reports name
   the exact model file served.
 

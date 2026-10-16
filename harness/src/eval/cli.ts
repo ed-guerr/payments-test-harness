@@ -31,7 +31,7 @@ import type { EvalRuntime } from "./runner";
 import { toMarkdown, writeReport } from "./report";
 import type { EvalConfig, EvalReport, Variant } from "./types";
 
-interface Flags {
+export interface Flags {
   smoke: boolean;
   tasks: string[];
   runs: number;
@@ -45,7 +45,7 @@ interface Flags {
   minPass: number | null;
 }
 
-function parseFlags(argv: string[]): Flags {
+export function parseFlags(argv: string[]): Flags {
   const f: Flags = {
     smoke: false,
     tasks: TASKS.map((t) => t.id),

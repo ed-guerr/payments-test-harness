@@ -325,6 +325,12 @@ isolation. Use `--variant three-way --runs 10 --seed 42` to run all three
 conditions. A seed helps reproduce requests on compatible endpoints, but
 does not guarantee deterministic generation.
 
+Every report carries an **experiment manifest** (hashes of the config,
+system prompt, task set, per-condition tool surface, KB manifest, and
+wire-protocol registry), per-task and per-category outcomes with 95% Wilson
+confidence intervals, min/p50/p95 distributions, and failures grouped by
+cause — so no attempt ever silently drops from a denominator.
+
 The eval doubles as a regression gate in two layers. **Layer A**
 (`npm run eval:replay`, in `npm run verify`, ~4 s, no LLM) replays recorded
 agent tool-call traces against the live MCP server and asserts properties of

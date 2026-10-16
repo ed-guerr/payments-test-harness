@@ -65,6 +65,24 @@ export interface ToolCallRecord {
   durationMs: number;
 }
 
+/**
+ * Why an attempt failed to pass (null when pass === true). Every attempt
+ * stays in the report denominator regardless of which of these hit.
+ */
+export type FailureReason =
+  /** agent loop itself failed (API error, malformed tool call, ...) */
+  | "agent-error"
+  /** the per-run wall-clock timeout fired */
+  | "timeout"
+  /** the agent exhausted maxToolSteps without a final answer */
+  | "step-budget"
+  /** the agent finished but never created a suite */
+  | "no-suite"
+  /** the independent re-run of the generated suite was red */
+  | "suite-red"
+  /** suite green but the ground-truth checklist is incomplete */
+  | "checklist-missing";
+
 /** One agent attempt at one task (one cell of the experiment). */
 export interface TaskRunRecord {
   taskId: string;
@@ -99,6 +117,8 @@ export interface TaskRunRecord {
   checklistFull: boolean;
   /** the score: suite created + runs green + full checklist */
   pass: boolean;
+  /** Why this attempt did not pass; null for passing runs. */
+  failureReason: FailureReason | null;
   trace: ToolCallRecord[];
 }
 
@@ -121,6 +141,18 @@ export interface VariantSummary {
   /** per-run average cost; null when the model has no committed price */
   avgCostUsd: number | null;
   perTask: { taskId: string; kbSensitive: boolean; categories: string[]; pass: number; of: number }[];
+  /** Wilson 95% interval for pass/runs; null when there are no runs. */
+  passCi95: { low: number; high: number } | null;
+  /** min/p50/p95 across ALL attempts (failed attempts included). */
+  distributions: {
+    toolCalls: { min: number; p50: number; p95: number };
+    suiteRuns: { min: number; p50: number; p95: number };
+    wallSec: { min: number; p50: number; p95: number };
+  };
+  /** Failed attempts by cause; pass + sum(failures) === runs. */
+  failures: Record<FailureReason, number>;
+  /** Per-category pass counts; a run tagged with several categories counts in each row. */
+  perCategory: { category: string; pass: number; of: number }[];
 }
 
 export interface EvalConfig {
@@ -137,11 +169,41 @@ export interface EvalConfig {
   runTimeoutMs: number;
 }
 
+/**
+ * Enough identity to know exactly what a report's runs were: the config,
+ * the prompts, the task set, the model-visible tool surface per condition,
+ * and the KB/registry/repo revisions. Hashes are sha256 over stable
+ * (key-sorted) JSON — compare two manifests to see what changed between runs.
+ */
+export interface ExperimentManifest {
+  startedAt: string;
+  /** How conditions/tasks/runs were sequenced. */
+  runOrder: string;
+  /** sha256 of the normalized EvalConfig. */
+  configHash: string;
+  /** sha256 of the agent system prompt. */
+  systemPromptHash: string;
+  /** sha256 of the selected tasks (id, prompt, suiteName, tags, checks). */
+  taskSetHash: string;
+  /** Model-visible tool surface per condition (content-off rewrites included). */
+  toolSurface: { variant: Variant; tools: number; hash: string }[];
+  /** sha256 of knowledge/.manifest.json (KB content identity). */
+  kbManifestHash: string;
+  /** sha256 of the wire-protocol registry suites are validated against. */
+  registryHash: string;
+  /** git HEAD at run start, or "not-a-git-checkout". */
+  repoRevision: string;
+  /** Qwen-style reasoning tokens (EVAL_THINKING): on/off. */
+  reasoning: string;
+}
+
 export interface EvalReport {
   generatedAt: string;
   config: EvalConfig;
   runs: TaskRunRecord[];
   summary: VariantSummary[];
+  /** Experiment identity; present in reports produced after 2026-10-14. */
+  manifest?: ExperimentManifest;
   /** Regression gate (roadmap R2 Layer B): per-variant min pass for this model
    *  (committed baseline, or --min-pass override); failed lists violations,
    *  skipped lists variants where the baseline wasn't comparable. */

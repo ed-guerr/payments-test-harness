@@ -118,6 +118,15 @@ export class Agent {
     this.kbAblation = options.kbAblation ?? "enabled";
   }
 
+  /** The exact tool specs the model sees (post-ablation rewrites included). */
+  toolSurface(): { name: string; description: string; parameters: Record<string, unknown> }[] {
+    return this.tools.map((t) => ({
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+    }));
+  }
+
   /** Discover the MCP tool surface once; the surface is fixed per server. */
   async discoverTools(): Promise<void> {
     const listed = await this.mcp.listTools();
