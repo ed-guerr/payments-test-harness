@@ -56,7 +56,7 @@ test("resolveMinPass: unknown model is not gated; content-off never baselined", 
   assert.deepEqual(u.minPass, {});
   assert.match(u.source, /no baseline/);
   const q = resolveMinPass("qwen3", null);
-  assert.equal(q.minPass["kb-on"], 33);
-  assert.equal(q.minPass["kb-off"], 32);
+  assert.equal(q.minPass["kb-on"], 110);
+  assert.equal(q.minPass["kb-off"], 101);
   assert.equal(q.minPass["kb-content-off"], undefined);
 });

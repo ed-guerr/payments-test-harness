@@ -14,9 +14,11 @@
 # pushes to main that touch the agent surface (eval code, MCP server,
 # knowledge base, protocol schema).
 #
-# It runs the FULL eval (11 tasks x 3 runs x KB on/off) and applies the
-# per-model baseline gate committed in harness/src/eval/baseline.json —
-# a variant regressing below its baseline fails the run.
+# It runs the FULL eval (11 tasks x 10 runs x KB on/off, seed 42 — the same
+# config the committed baseline was measured with, since the gate only
+# compares runs of matching task/run counts) and applies the per-model
+# baseline gate committed in harness/src/eval/baseline.json — a variant
+# regressing below its baseline fails the run.
 name: eval
 
 on:
@@ -42,7 +44,7 @@ jobs:
     # Repo variable gate: no secrets needed until it is turned on.
     if: ${{ vars.EVAL_RUN_EVAL == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       EVAL_API_BASE: ${{ secrets.EVAL_API_BASE }}
       EVAL_API_MODEL: ${{ secrets.EVAL_API_MODEL }}
@@ -70,11 +72,12 @@ jobs:
         working-directory: backend
         run: make
 
-      # Full 11-task eval, KB on vs off, 3 runs each; the committed baseline
-      # for the model then gates the result (non-zero exit on regression).
+      # Full 11-task eval, KB on vs off, 10 runs each, seed 42 (matches the
+      # baseline config); the committed baseline for the model then gates
+      # the result (non-zero exit on regression).
       - name: npm run eval
         working-directory: harness
-        run: npm run eval
+        run: npm run eval -- --runs 10 --seed 42
 
       - name: Upload eval report
         if: always()
