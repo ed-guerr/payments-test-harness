@@ -36,9 +36,10 @@ export function safeSuiteFile(name: string): string {
 }
 export const DATA_DIR = (): string => path.join(packageRoot(), "data");
 /** Persisted run results (one JSON file per suite run). */
-export const RUNS_DIR = (): string => path.join(packageRoot(), "runs");
-/** HTML run reports: <repo>/docs/test-runs (one self-contained .html per run). */
-export const REPORTS_DIR = (): string => path.join(packageRoot(), "..", "docs", "test-runs");
+/** Per-run JSON artifacts (every run_suite caller): <repo>/artifacts/suite-runs. */
+export const RUNS_DIR = (): string => path.join(packageRoot(), "..", "artifacts", "suite-runs");
+/** HTML run reports: <repo>/artifacts/test-reports (one self-contained .html per run). */
+export const REPORTS_DIR = (): string => path.join(packageRoot(), "..", "artifacts", "test-reports");
 /** Backend build output: <repo>/backend/build (sibling of harness/). */
 export const backendBuildDir = (): string => path.join(packageRoot(), "..", "backend", "build");
 /** The backend's SQL schema + seed file. */

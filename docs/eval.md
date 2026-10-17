@@ -110,7 +110,7 @@ A/B is meaningful even in a short run.
 
 ## Reading the report
 
-Reports land in `harness/eval-reports/` (gitignored, except committed
+Reports land in `artifacts/eval/` (gitignored, except committed
 `sample-*`):
 
 - `<stamp>-<model>.json` — full report: config, every run with the complete

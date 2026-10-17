@@ -3,7 +3,7 @@
  *
  * The JSON report is the source of truth (full per-run traces included);
  * the markdown table is what the README quotes. Both are written to
- * harness/eval-reports/ (gitignored except committed samples).
+ * artifacts/eval/ (gitignored except committed samples).
  */
 import fs from "node:fs";
 import path from "node:path";

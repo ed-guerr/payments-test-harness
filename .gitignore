@@ -6,10 +6,12 @@ backend/build-asan/
 harness/node_modules/
 harness/dist/
 harness/data/
-harness/runs/
-harness/eval-reports/*
-!harness/eval-reports/sample-*
-docs/test-runs/
+
+# generated artifacts (committed samples re-included below)
+artifacts/suite-runs/
+artifacts/test-reports/
+artifacts/eval/*
+!artifacts/eval/sample-*
 
 # logs & temp
 *.log

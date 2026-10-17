@@ -82,6 +82,6 @@ jobs:
         with:
           name: eval-report
           path: |
-            harness/eval-reports/*.json
-            harness/eval-reports/*.md
+            artifacts/eval/*.json
+            artifacts/eval/*.md
           if-no-files-found: ignore

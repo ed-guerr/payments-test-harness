@@ -17,7 +17,7 @@
  *   --seed N                 endpoint sampling seed (optional; not full determinism)
  *   --model M / --base URL / --key K
  *   --max-steps N           max tool steps per run
- *   --out DIR               report directory (default harness/eval-reports)
+ *   --out DIR               report directory (default artifacts/eval)
  *   --min-pass N            exit 1 if any variant's pass count < N (CI gate)
  */
 import { execSync } from "node:child_process";
@@ -56,7 +56,7 @@ export function parseFlags(argv: string[]): Flags {
     key: process.env.EVAL_API_KEY ?? "",
     maxSteps: Number(process.env.EVAL_MAX_TOOL_STEPS ?? 25),
     seed: process.env.EVAL_SEED === undefined ? null : Number(process.env.EVAL_SEED),
-    out: path.join(packageRoot(), "eval-reports"),
+    out: path.join(packageRoot(), "..", "artifacts", "eval"),
     minPass: null,
   };
   for (let i = 0; i < argv.length; i++) {

@@ -98,7 +98,7 @@ export interface RunnerOptions {
    * Where each finished run's self-contained HTML report goes
    * (<reportsDir>/<suite>_<ts>.html). Resolution: this option if set
    * ("" disables); otherwise the HARNESS_HTML_REPORTS env var — "1"
-   * enables the default <repo>/docs/test-runs, anything else (including
+   * enables the default <repo>/artifacts/test-reports, anything else (including
    * unset) writes nothing. HTML reports are off by default; the run JSON
    * in runsDir is written regardless.
    */

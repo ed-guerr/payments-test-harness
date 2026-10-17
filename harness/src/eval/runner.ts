@@ -31,7 +31,7 @@ import { judgeSuite } from "./judge";
 import { buildManifest, sha256Hex, stableJson } from "./manifest";
 import { classifyFailure, summarize } from "./report";
 
-const EVAL_REPORTS_DIR = (): string => path.join(packageRoot(), "eval-reports");
+const EVAL_REPORTS_DIR = (): string => path.join(packageRoot(), "..", "artifacts", "eval");
 
 export interface EvalRuntime {
   config: EvalConfig;
@@ -83,7 +83,7 @@ async function runSuiteFresh(suite: Suite): Promise<{ green: boolean; steps: num
   try {
     const runner = new Runner(cluster.conns, cluster.db, () => undefined, {
       runsDir: path.join(EVAL_REPORTS_DIR(), "runs"),
-      reportsDir: "", // eval runs do not write HTML reports into docs/test-runs
+      reportsDir: "", // eval runs do not write HTML reports into artifacts/test-reports
       killProcess: (p, s) => cluster.kill(p, s),
     });
     const summary = await runner.runSuite(suite);

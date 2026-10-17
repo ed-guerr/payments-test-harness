@@ -31,9 +31,9 @@ Registry → verified balances in the per-suite database:
 Committed results — two local models via llama.cpp on a LAN GPU box plus one
 hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0.
 Trimmed full-fidelity samples (agent-authored suites intact, tool results
-truncated) in [`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json),
-[`sample-gpt-6-luna.json`](harness/eval-reports/sample-gpt-6-luna.json), and
-[`sample-gemma-12b.json`](harness/eval-reports/sample-gemma-12b.json):
+truncated) in [`sample-qwen3-27b.json`](artifacts/eval/sample-qwen3-27b.json),
+[`sample-gpt-6-luna.json`](artifacts/eval/sample-gpt-6-luna.json), and
+[`sample-gemma-12b.json`](artifacts/eval/sample-gemma-12b.json):
 
 | model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) |
 |---|---|---|---|---|---|---|---|---|---|
@@ -269,7 +269,7 @@ typed failure, verifies state is exactly pre-kill), and
 npm run run:cli -- suites/insufficient-funds.json
 ```
 
-Every run persists a machine-readable result JSON to `harness/runs/`
+Every run persists a machine-readable result JSON to `artifacts/suite-runs/`
 (gitignored). If you want shareable **proof of what a run actually did** —
 a self-contained HTML report styled like the app, with each step's action,
 pass/fail status, assertions (expected vs actual, mismatches highlighted),
@@ -277,7 +277,7 @@ and a timing waterfall — opt in with `HARNESS_HTML_REPORTS=1`:
 
 ```bash
 HARNESS_HTML_REPORTS=1 npm run run:cli -- suites/insufficient-funds.json
-# → docs/test-runs/insufficient-funds_<timestamp>.html
+# → artifacts/test-reports/insufficient-funds_<timestamp>.html
 ```
 
 Reports are off by default so routine runs (and the 66-run eval) don't
@@ -469,10 +469,13 @@ harness/
   src/design/         the designer CLI
   src/eval/           the KB on/off evaluation harness (npm run eval)
                       + recorded-trace replay gate (npm run eval:replay)
-  eval-reports/       eval reports (sample-qwen3-27b.* committed; rest gitignored)
   src/**/*.test.ts    node:test unit tests (npm run test:unit)
   suites/             8 committed sample suites (no-double-settle is agent-authored)
-  scripts/            gen_registry.js · mcp-self-test.js · demo-gif/ (GIF capture pipeline)
+  scripts/            gen_registry.js · mcp-self-test.js · clean-runs.js · demo-gif/
+artifacts/          generated artifacts (gitignored except committed sample-*)
+  suite-runs/         per-run JSON results (every run_suite; prune: npm run runs:clean)
+  test-reports/       self-contained HTML run reports (HARNESS_HTML_REPORTS=1)
+  eval/               eval reports + independent reruns (eval/runs/)
 knowledge/            generated intern guides (+ INDEX.md + .manifest.json)
 docs/
   plans/InitialDesign.md    the full design plan (phases P1–P6)

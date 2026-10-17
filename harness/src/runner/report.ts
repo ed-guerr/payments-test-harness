@@ -2,7 +2,7 @@
  * runner/report.ts — self-contained HTML run reports.
  *
  * Each completed run writes <reportsDir>/<suite>_<ts>.html (default
- * <repo>/docs/test-runs): the suite's steps with pass/fail status, the
+ * <repo>/artifacts/test-reports): the suite's steps with pass/fail status, the
  * pass/fail assertions highlighted (per-field expected vs actual), a
  * per-step timing waterfall, and the app's full interaction model —
  * expandable step rows (full definition + result), a collapsible timeline,

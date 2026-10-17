@@ -67,8 +67,8 @@ jobs:
         with:
           name: run-reports
           path: |
-            harness/runs/*.json
-            docs/test-runs/*.html
+            artifacts/suite-runs/*.json
+            artifacts/test-reports/*.html
           if-no-files-found: ignore
 
   e2e:
