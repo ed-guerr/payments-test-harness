@@ -239,3 +239,33 @@ default**: it activates when the repository variable `EVAL_RUN_EVAL` is
 `true` and the secrets `EVAL_API_BASE` / `EVAL_API_MODEL` / `EVAL_API_KEY`
 are set. After an intentional improvement, re-run the full eval and update
 the baseline with the new source note.
+
+## Per-run trace reports
+
+Every eval run records a full tool trace (tool, args, ok/error, result
+preview, duration). `npm run trace-report` turns one run of a saved eval
+report into a human-readable Markdown file — no model or backend needed:
+
+```bash
+cd harness
+# one run: <report.json> <taskId>/<variant>/<run>
+npm run trace-report -- ../artifacts/eval/<report>.json unknown-account/kb-off/9 --key "$EVAL_API_KEY"
+# every run of a report (writes <variant>/<task>-runNN.md under DIR)
+npm run trace-report -- ../artifacts/eval/<report>.json --all --out-dir /tmp/traces
+```
+
+A report shows: the run summary (outcome, failure cause, checklist,
+independent rerun, tokens/cost, wall time), a phase timeline of every tool
+call (discovery / kb-lookup / authoring / executing) with red suite runs
+flagged inline, the suite revision history with field-level diffs between
+`create_suite`/`update_suite` revisions, red suite runs with per-step
+expected/actual detail, the checklist with reasons, and the agent's final
+message. Tool-result text is truncated at 2000 chars in the source trace
+(full text was sent to the model); truncation is marked.
+
+Redaction: `EVAL_API_KEY` and any `--key` values are scrubbed from the
+output, plus pattern matches for `Bearer` tokens and URL
+`user:pass@` credentials. Scrubbed samples from the 2026-10-17 qwen3
+10-run three-way: `artifacts/eval/sample-trace-qwen3-recovery.md` (a
+fail → update → green recovery) and `sample-trace-qwen3-budget.md` (a
+step-budget failure).
