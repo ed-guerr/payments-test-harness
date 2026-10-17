@@ -29,7 +29,8 @@ Registry → verified balances in the per-suite database:
 ## The result, in numbers
 
 Committed results — two local models via llama.cpp on a LAN GPU box plus one
-hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0.
+hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0,
+two conditions (kb-on / kb-off).
 Trimmed full-fidelity samples (agent-authored suites intact, tool results
 truncated) in [`sample-qwen3-27b.json`](artifacts/eval/sample-qwen3-27b.json),
 [`sample-gpt-6-luna.json`](artifacts/eval/sample-gpt-6-luna.json), and
@@ -52,7 +53,8 @@ KB**:
 - **Qwen3-27B (strong):** pass rate saturates (33 vs 32); the value shows
   as *efficiency* — one-shot suites (1.0 vs 1.3 re-runs), fewer tool calls
   (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
-  class of miss the KB exists to prevent.
+  class of miss the KB exists to prevent. (The 10-run three-way below
+  sharpens both points.)
 - **gpt-6-luna (hosted frontier):** pass rate is a wash (20 vs 22, within
   run noise) — a strong model infers the protocol from introspection alone.
   But on the two KB-sensitive tasks the KB still pays (3/3 vs 1/3 on
@@ -74,6 +76,51 @@ KB**:
   0/3 for Gemma in both. No single task discriminates; the set does. Two
   tasks are KB-sensitive by construction — their ground truth lives only in
   the intern guides, and the prompts never leak it.
+
+### The same model, three ways (10 runs per task)
+
+The two-condition table can't separate the KB's *content* from the mere
+presence of a *lookup tool*. So the local 27B ran all 11 tasks ten times in
+three conditions: KB on; KB tools present but returning empty results; no KB
+tools.
+
+| condition | pass | 95% CI | tool calls (mean) | suite reruns (mean) |
+|---|---|---|---|---|
+| kb-on | 110/110 | 97–100% | 13.6 | 1.0 |
+| kb-content-off | 110/110 | 97–100% | 14.9 | 1.2 |
+| kb-off | 101/110 | 85–96% | 15.3 | 1.4 |
+
+Ten of the eleven tasks are 10/10 in every condition. The whole difference
+is `unknown-account`, where the model must create a payment to a nonexistent
+account and the rejection comes back as a *normal ack* with a specific status
+code. This is a fact the wire schema never states.
+
+With the KB tools present, the model gets the code right on the first try,
+20/20 across the two KB conditions. One `kb_search` excerpt is enough with
+real content. With empty content, it tries the search, gets `[]`, falls
+through to a committed suite (`insufficient-funds` demonstrates the rejection
+ack), and still writes the right assertion before its first run.
+
+Without the tools, the model guesses the wrong code all ten times (same
+guess at temp 0), even though the red run's error prints the correct value
+(`status: expected 2, got 1`). One of the ten runs updates the suite and goes
+green on rerun, while the other nine wander through schema lookups and result
+polling until the 25-step budget runs out. The miss is recovery discipline
+under budget pressure, not missing information since the answer was on screen
+from step 6.
+
+Excluding that task, the three conditions are statistically
+indistinguishable on tool calls (14.3 / 15.4 / 14.3). Furthermore, the KB is
+not uniformly cheaper, it costs more on `cancel-payment` and
+`interleaved-payments`.
+
+The measured value is convergence on facts the schema doesn't state, with
+part of the effect living in the authoring surface (a reference to consult
+before committing to a code) rather than the guide text alone. These numbers
+cover one model and one task set; the empty-result condition is a content
+ablation, not a matched-response control. The 9/10 failure seems more like
+one deterministic first-guess behavior with a 10% recovery rate, not nine
+independent failures.
 
 ## What's in the repo
 
