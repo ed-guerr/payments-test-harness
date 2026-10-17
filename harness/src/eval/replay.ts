@@ -41,6 +41,8 @@ export interface Trace {
   id: string;
   source: string;
   noKb: boolean;
+  /** Register KB tools but suppress retrieved content for ablation replay. */
+  contentOff?: boolean;
   calls: TraceCall[];
   cleanup?: string[];
 }
@@ -49,10 +51,12 @@ function toolResultText(r: CallToolResult): string {
   return r.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
 }
 
-function envFor(noKb: boolean): Record<string, string> {
+function envFor(noKb: boolean, contentOff = false): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
   env.MCP_NO_KB = noKb ? "1" : "0";
+  if (contentOff) env.MCP_KB_CONTENT_OFF = "1";
+  else delete env.MCP_KB_CONTENT_OFF;
   return env;
 }
 
@@ -64,6 +68,9 @@ export async function replayTrace(client: Client, trace: Trace): Promise<string[
   }
   if (!trace.noKb && !tools.includes("kb_search")) {
     failures.push("kb_search missing in a KB trace — MCP_NO_KB switch broken");
+  }
+  if (trace.contentOff && !tools.includes("kb_read")) {
+    failures.push("kb_read missing in content-off trace — tool surface changed");
   }
   for (let i = 0; i < trace.calls.length; i++) {
     const call = trace.calls[i];
@@ -117,7 +124,7 @@ export async function replayAll(tracesDir: string): Promise<{ total: number; fai
       command: process.execPath,
       args: [tsxCli, path.join(packageRoot(), "src", "mcp", "server.ts")],
       cwd: packageRoot(),
-      env: envFor(trace.noKb),
+      env: envFor(trace.noKb, trace.contentOff),
     });
     const client = new Client({ name: "eval-replay", version: "0" });
     try {
@@ -128,7 +135,7 @@ export async function replayAll(tracesDir: string): Promise<{ total: number; fai
         for (const msg of failures) all.push(`[${trace.id}] ${msg}`);
         console.error(`[replay] FAIL ${trace.id}: ${failures.length} problem(s)`);
       } else {
-        console.log(`[replay] ok   ${trace.id} (${trace.calls.length} calls, kb ${trace.noKb ? "off" : "on"})`);
+        console.log(`[replay] ok   ${trace.id} (${trace.calls.length} calls, kb ${trace.noKb ? "off" : trace.contentOff ? "content-off" : "on"})`);
       }
     } finally {
       await client.close();

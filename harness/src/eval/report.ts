@@ -9,6 +9,10 @@ import fs from "node:fs";
 import path from "node:path";
 import type { EvalConfig, EvalReport, TaskRunRecord, VariantSummary } from "./types";
 
+function escapeMarkdownCell(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/[\r\n]+/g, " ");
+}
+
 function median(values: number[]): number {
   if (values.length === 0) return 0;
   const s = [...values].sort((a, b) => a - b);
@@ -47,6 +51,7 @@ export function summarize(runs: TaskRunRecord[]): VariantSummary[] {
         return {
           taskId,
           kbSensitive: tr.some((r) => r.kbSensitive),
+          categories: [...new Set(tr.flatMap((r) => r.categories))].sort(),
           pass: tr.filter((r) => r.pass).length,
           of: tr.length,
         };
@@ -60,7 +65,7 @@ export function toMarkdown(report: EvalReport): string {
   out.push(`# eval — ${report.config.model} @ ${report.config.apiBase}`);
   out.push("");
   out.push(`generated ${report.generatedAt} · ${report.config.runsPerTask} run(s)/task · ` +
-    `temperature ${report.config.temperature} · max ${report.config.maxToolSteps} tool steps`);
+    `temperature ${report.config.temperature} · seed ${report.config.seed ?? "unsupported/unset"} · max ${report.config.maxToolSteps} tool steps`);
   out.push("");
   out.push("| config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) | total tokens in/out | total cost (usd) |");
   out.push("|---|---|---|---|---|---|---|---|---|---|---|");
@@ -76,16 +81,22 @@ export function toMarkdown(report: EvalReport): string {
     out.push("");
     out.push(`## per-task — ${s.variant}`);
     out.push("");
-    out.push("| task | kb-sensitive | pass | tool calls | wall (s) |");
-    out.push("|---|---|---|---|---|");
+    out.push("| task | kb-sensitive | categories | pass | tool calls | wall (s) |");
+    out.push("|---|---|---|---|---|---|");
     const rows = s.perTask;
     for (const row of rows) {
       const tr = report.runs.filter((r) => r.variant === s.variant && r.taskId === row.taskId);
       const avgCalls = tr.length ? Math.round((tr.reduce((a, r) => a + r.toolCalls, 0) / tr.length) * 10) / 10 : 0;
       const wall = Math.round(median(tr.map((r) => r.totalWallMs)) / 1000);
-      out.push(`| ${row.taskId} | ${row.kbSensitive ? "yes" : ""} | ${row.pass}/${row.of} | ${avgCalls} | ${wall} |`);
+      out.push(`| ${escapeMarkdownCell(row.taskId)} | ${row.kbSensitive ? "yes" : ""} | ${escapeMarkdownCell(row.categories.join(", "))} | ${row.pass}/${row.of} | ${avgCalls} | ${wall} |`);
     }
   }
+  out.push("");
+  out.push("## Interpretation limits");
+  out.push("");
+  out.push("- Results describe this task set, prompt, tool surface, backend, model build, and endpoint; they do not establish a general effect across production systems.");
+  out.push("- KB-on versus KB-off changes tool availability. The `kb-content-off` condition retains those tool names but returns empty results; it is a closer content ablation, though empty results still differ from real retrieval.");
+  out.push("- Pass rates are descriptive. With small run counts, inspect per-task outcomes and repeat runs before drawing causal conclusions.");
   if (report.gate) {
     out.push("");
     out.push("## regression gate");

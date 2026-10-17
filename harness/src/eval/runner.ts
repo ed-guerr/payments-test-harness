@@ -1,7 +1,7 @@
 /**
  * eval/runner.ts — experiment orchestration.
  *
- * For each variant (kb-on / kb-off):
+ * For each variant (kb-on / kb-content-off / kb-off):
  *   spawn ONE MCP server (MCP_NO_KB=1 flips the variant)
  *   for each task, for each run:
  *     1. agent loop (chat + MCP tools)
@@ -43,7 +43,12 @@ async function spawnMcpServer(variant: Variant): Promise<Client> {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
   // kbEnabled() treats anything !== "1" as enabled; set explicitly per variant.
+  // Keep KB tools present for the content-only ablation, but make their
+  // server-side responses empty; this retains a fixed MCP surface.
   env.MCP_NO_KB = variant === "kb-off" ? "1" : "0";
+  // Content-only ablation keeps KB tools registered but makes their results empty.
+  if (variant === "kb-content-off") env.MCP_KB_CONTENT_OFF = "1";
+  else delete env.MCP_KB_CONTENT_OFF;
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [tsxCli, path.join(packageRoot(), "src", "mcp", "server.ts")],
@@ -107,6 +112,7 @@ async function runTask(
     run,
     model: rt.config.model,
     kbSensitive: Boolean(task.kbSensitive),
+    categories: task.categories ?? [],
     agentWallMs: 0,
     totalWallMs: 0,
     toolCalls: 0,
@@ -127,7 +133,9 @@ async function runTask(
     trace: [],
   };
   try {
-    const agent = new Agent(rt.agentCfg, client);
+    const agent = new Agent(rt.agentCfg, client, {
+      kbAblation: variant === "kb-content-off" ? "content-only" : "enabled",
+    });
     await agent.discoverTools();
     const pending = agent.run(SYSTEM_PROMPT, taskUserPrompt(task.prompt, task.suiteName));
     let ar;

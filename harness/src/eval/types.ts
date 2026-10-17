@@ -10,8 +10,8 @@
  *          ground-truth checklist is satisfied.
  */
 
-/** A variant of the experiment: KB tools available, or schema-only. */
-export type Variant = "kb-on" | "kb-off";
+/** Experiment conditions: KB on, tool-preserving content ablation, or schema-only. */
+export type Variant = "kb-on" | "kb-off" | "kb-content-off";
 
 /**
  * Ground-truth checks, evaluated structurally against the generated suite
@@ -50,6 +50,8 @@ export interface EvalTask {
   suiteName: string;
   /** True when the task discriminates KB-grounded from schema-only authoring. */
   kbSensitive?: boolean;
+  /** Optional tags for stratified reporting (e.g. lifecycle, negative, chaos). */
+  categories?: string[];
   checks: Check[];
 }
 
@@ -70,6 +72,8 @@ export interface TaskRunRecord {
   run: number;
   model: string;
   kbSensitive: boolean;
+  /** Task tags copied from EvalTask for stratified summaries. */
+  categories: string[];
   /** agent loop wall time (chat + tool round trips) */
   agentWallMs: number;
   /** agent loop + independent suite re-run */
@@ -116,7 +120,7 @@ export interface VariantSummary {
   costUsd: number | null;
   /** per-run average cost; null when the model has no committed price */
   avgCostUsd: number | null;
-  perTask: { taskId: string; kbSensitive: boolean; pass: number; of: number }[];
+  perTask: { taskId: string; kbSensitive: boolean; categories: string[]; pass: number; of: number }[];
 }
 
 export interface EvalConfig {
@@ -124,6 +128,8 @@ export interface EvalConfig {
   apiBase: string;
   temperature: number;
   maxToolSteps: number;
+  /** Seed passed to compatible chat-completion endpoints, if configured. */
+  seed: number | null;
   runsPerTask: number;
   variants: Variant[];
   taskIds: string[];

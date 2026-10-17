@@ -13,7 +13,8 @@
  *   --smoke                 3 tasks (incl. the KB-sensitive one) x 1 run, both variants
  *   --tasks a,b,c           task ids (see tasks.ts)
  *   --runs N                runs per task (default 3; smoke: 1)
- *   --variant on|off|both   which variant(s) (default both)
+ *   --variant on|off|content-off|both|three-way   conditions (default both)
+ *   --seed N                 endpoint sampling seed (optional; not full determinism)
  *   --model M / --base URL / --key K
  *   --max-steps N           max tool steps per run
  *   --out DIR               report directory (default harness/eval-reports)
@@ -39,6 +40,7 @@ interface Flags {
   base: string;
   key: string;
   maxSteps: number;
+  seed: number | null;
   out: string;
   minPass: number | null;
 }
@@ -53,6 +55,7 @@ function parseFlags(argv: string[]): Flags {
     base: process.env.EVAL_API_BASE ?? "http://127.0.0.1:8080/v1",
     key: process.env.EVAL_API_KEY ?? "",
     maxSteps: Number(process.env.EVAL_MAX_TOOL_STEPS ?? 25),
+    seed: process.env.EVAL_SEED === undefined ? null : Number(process.env.EVAL_SEED),
     out: path.join(packageRoot(), "eval-reports"),
     minPass: null,
   };
@@ -76,9 +79,11 @@ function parseFlags(argv: string[]): Flags {
       case "--variant": {
         const v = next();
         if (v === "both") f.variant = ["kb-on", "kb-off"];
+        else if (v === "three-way") f.variant = ["kb-on", "kb-content-off", "kb-off"];
         else if (v === "on") f.variant = ["kb-on"];
         else if (v === "off") f.variant = ["kb-off"];
-        else throw new Error(`--variant must be on|off|both (got ${v})`);
+        else if (v === "content-off") f.variant = ["kb-content-off"];
+        else throw new Error(`--variant must be on|off|content-off|both|three-way (got ${v})`);
         break;
       }
       case "--model":
@@ -92,6 +97,9 @@ function parseFlags(argv: string[]): Flags {
         break;
       case "--max-steps":
         f.maxSteps = Number(next());
+        break;
+      case "--seed":
+        f.seed = Number(next());
         break;
       case "--out":
         f.out = path.resolve(next());
@@ -110,6 +118,7 @@ function parseFlags(argv: string[]): Flags {
   for (const id of f.tasks) taskById(id); // validate eagerly
   if (!Number.isInteger(f.runs) || f.runs < 1) throw new Error(`--runs must be a positive integer (got ${f.runs})`);
   if (!Number.isInteger(f.maxSteps) || f.maxSteps < 1) throw new Error(`--max-steps must be a positive integer`);
+  if (f.seed !== null && !Number.isInteger(f.seed)) throw new Error(`--seed must be an integer`);
   return f;
 }
 
@@ -153,6 +162,7 @@ async function main(): Promise<void> {
     apiBase: f.base,
     temperature: Number(process.env.EVAL_TEMPERATURE ?? 0),
     maxToolSteps: f.maxSteps,
+    seed: f.seed,
     runsPerTask: f.runs,
     variants: f.variant,
     taskIds: f.tasks,
@@ -173,6 +183,7 @@ async function main(): Promise<void> {
       apiKey: f.key,
       temperature: config.temperature,
       maxToolSteps: config.maxToolSteps,
+      ...(f.seed === null ? {} : { seed: f.seed }),
     },
     tasks,
   };
@@ -219,7 +230,7 @@ interface BaselineFile {
   models: Record<string, { source?: string; kb?: BaselineEntry; no_kb?: BaselineEntry }>;
 }
 
-const VARIANT_BASELINE_KEY: Record<Variant, "kb" | "no_kb"> = { "kb-on": "kb", "kb-off": "no_kb" };
+const VARIANT_BASELINE_KEY: Partial<Record<Variant, "kb" | "no_kb">> = { "kb-on": "kb", "kb-off": "no_kb" };
 
 /** Min pass per variant: --min-pass override wins; otherwise the committed
  *  baseline for this model (src/eval/baseline.json). */
@@ -238,7 +249,9 @@ export function resolveMinPass(
   const minPass: Partial<Record<Variant, number>> = {};
   const totals: Partial<Record<Variant, number>> = {};
   for (const v of ["kb-on", "kb-off"] as Variant[]) {
-    const e = entry[VARIANT_BASELINE_KEY[v]];
+    const baselineKey = VARIANT_BASELINE_KEY[v];
+    if (!baselineKey) continue; // content ablations get their own baseline only after repeated measurements
+    const e = entry[baselineKey];
     if (e) {
       minPass[v] = e.pass;
       totals[v] = e.total;

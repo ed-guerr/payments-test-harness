@@ -31,6 +31,8 @@ export interface AgentConfig {
   apiKey: string;
   temperature: number;
   maxToolSteps: number;
+  /** Per-agent-loop seed; optional if the endpoint does not support it. */
+  seed?: number;
 }
 
 export interface ToolCallRecord {
@@ -94,6 +96,8 @@ export class Agent {
     function: { name: string; description: string; parameters: Record<string, unknown> };
   }[] = [];
 
+  private readonly kbAblation: "enabled" | "content-only";
+
   // Hosted APIs (e.g. OpenAI) reject the Qwen-only chat_template_kwargs
   // parameter with a 400. If the endpoint answers that, remember it and
   // retry without the parameter — local llama.cpp servers keep the
@@ -109,19 +113,35 @@ export class Agent {
   constructor(
     private cfg: AgentConfig,
     private mcp: Client,
-  ) {}
+    options: { kbAblation?: "enabled" | "content-only" } = {},
+  ) {
+    this.kbAblation = options.kbAblation ?? "enabled";
+  }
 
   /** Discover the MCP tool surface once; the surface is fixed per server. */
   async discoverTools(): Promise<void> {
     const listed = await this.mcp.listTools();
-    this.tools = listed.tools.map((t) => ({
-      type: "function",
-      function: {
-        name: t.name,
-        description: t.description ?? "",
-        parameters: (t.inputSchema ?? { type: "object", properties: {} }) as Record<string, unknown>,
-      },
-    }));
+    this.tools = listed.tools.map((t) => {
+      const isKbTool = t.name === "kb_search" || t.name === "kb_read";
+      if (isKbTool && this.kbAblation === "content-only") {
+        return {
+          type: "function" as const,
+          function: {
+            name: t.name,
+            description: "Knowledge retrieval tool disabled for this experiment condition.",
+            parameters: { type: "object", properties: {}, additionalProperties: false },
+          },
+        };
+      }
+      return {
+        type: "function" as const,
+        function: {
+          name: t.name,
+          description: t.description ?? "",
+          parameters: (t.inputSchema ?? { type: "object", properties: {} }) as Record<string, unknown>,
+        },
+      };
+    });
   }
 
   private async chat(messages: ChatMessage[]): Promise<ChatResponse> {
@@ -133,6 +153,7 @@ export class Agent {
       messages,
       tools: this.tools,
       temperature: this.cfg.temperature,
+      ...(this.cfg.seed === undefined ? {} : { seed: this.cfg.seed }),
       // Qwen3 chat template: disable reasoning tokens. Set EVAL_THINKING=1 to
       // turn reasoning on. Endpoints that reject the parameter (OpenAI)
       // trigger the 400 retry below, which drops it for this and all
@@ -192,12 +213,19 @@ export class Agent {
           let ok = true;
           let text: string;
           try {
-            const r = (await this.mcp.callTool({
-              name: tc.function.name,
-              arguments: safeParse(tc.function.arguments) as Record<string, unknown>,
-            })) as unknown as CallToolResult;
-            text = toolResultText(r);
-            ok = r.isError !== true;
+            if (this.kbAblation === "content-only" && (tc.function.name === "kb_search" || tc.function.name === "kb_read")) {
+              ok = true;
+              // MCP tool result text is an array; use an empty one so the
+              // content-off condition preserves the response shape.
+              text = "[]";
+            } else {
+              const r = (await this.mcp.callTool({
+                name: tc.function.name,
+                arguments: safeParse(tc.function.arguments) as Record<string, unknown>,
+              })) as unknown as CallToolResult;
+              text = toolResultText(r);
+              ok = r.isError !== true;
+            }
           } catch (e) {
             ok = false;
             text = e instanceof Error ? e.message : String(e);

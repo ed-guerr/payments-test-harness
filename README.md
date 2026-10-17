@@ -4,24 +4,87 @@
 
 <!-- CI badge: add `![CI](https://github.com/<you>/payments-test-harness/actions/workflows/verify.yml/badge.svg)` once the repo has a public remote. -->
 
-A payments backend in C (three TCP processes, function-pointer message
-tables, SQLite) plus a test-harness app in Electron/React/TypeScript that
-runs persisted JSON test suites in realtime — and an **MCP server** that lets
-an AI agent author those tests itself, grounded in a generated **knowledge
-base** of per-directory "intern guides".
+**An LLM agent that autonomously authors, validates, and runs integration
+tests for a complex C payments backend** — grounded in a generated
+knowledge base, with the effect *measured* (KB on vs off, two models, 66
+runs) rather than asserted. The agent's entire world is a 15-tool MCP
+server; every artifact it produces is validated before it exists, replayable
+on any machine, and contained so the worst case is structurally harmless.
 
-It is a self-contained sample of a real engineering pattern: *one source of
-truth for the wire protocol, generated from the C code, consumed by every
-layer* — and a knowledge pipeline that turns "the code says what fields
-exist" into "the agent knows what the code does".
+The test target is deliberately not a toy: the C backend is a stand-in for
+a complex multi-process C system (three long-lived processes, a hand-rolled
+binary wire protocol, X-macro message tables, function-pointer dispatch,
+SQLite, zero documentation). That is the environment agents actually have
+to work in, and it is where the knowledge pipeline earns its keep: there is
+no OpenAPI to hand the model, only C.
 
-**~51-second demo** (half speed) — a live `pi` session running a local 27B
+**~47-second demo** (half speed) — a live `pi` session running a local 27B
 model (llama.cpp `qwen3`) authors a double-settle test through the harness
 MCP tools and runs it 10/10 green; *that* suite then runs green in the app;
 then `ledger-chaos-kill` with the `ECONNRESET` failure expanded → Protocol
 Registry → verified balances in the per-suite database:
 
 ![demo](docs/demo.gif)
+
+## The result, in numbers
+
+Committed results — two local models via llama.cpp on a LAN GPU box plus one
+hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0.
+Trimmed full-fidelity samples (agent-authored suites intact, tool results
+truncated) in [`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json),
+[`sample-gpt-6-luna.json`](harness/eval-reports/sample-gpt-6-luna.json), and
+[`sample-gemma-12b.json`](harness/eval-reports/sample-gemma-12b.json):
+
+| model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) |
+|---|---|---|---|---|---|---|---|---|---|
+| **Qwen3.8-27B Q4_K_M** (the GIF's model) | **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 | 53,285 / 1,098 | 0.0000 |
+| Qwen3.8-27B Q4_K_M | kb-off | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 | 48,993 / 1,311 | 0.0000 |
+| gpt-6-luna (hosted, OpenAI) | kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 | 35,298 / 809 | 0.0039 |
+| gpt-6-luna (hosted, OpenAI) | kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 | 58,118 / 955 | 0.0063 |
+| Gemma-4-12B QAT Q4_0 | **kb-on** | **12/33** | 21/33 | 15/33 | 14.4 | 0.9 | 14 | 87,127 / 2,555 | n/a |
+| Gemma-4-12B QAT Q4_0 | kb-off | 8/33 | 14/33 | 8/33 | 18.1 | 0.8 | 50 | 96,361 / 4,122 | n/a |
+
+What the numbers say, honestly — the KB's measurable value **moves from
+efficiency to pass-or-fail as the model gets weaker, and at the frontier it
+mostly disappears — except on the tasks whose ground truth lives only in the
+KB**:
+
+- **Qwen3-27B (strong):** pass rate saturates (33 vs 32); the value shows
+  as *efficiency* — one-shot suites (1.0 vs 1.3 re-runs), fewer tool calls
+  (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
+  class of miss the KB exists to prevent.
+- **gpt-6-luna (hosted frontier):** pass rate is a wash (20 vs 22, within
+  run noise) — a strong model infers the protocol from introspection alone.
+  But on the two KB-sensitive tasks the KB still pays (3/3 vs 1/3 on
+  `gateway-forward-completes`, 3/3 vs 2/3 on `settle-moves-money`), and the
+  failure mode changes shape: instead of exhausting the 25-step tool budget
+  (Gemma's miss), it writes a *functionally correct* suite that drops one
+  ground-truth assertion — `happy-path` kb-on is 0/3 on a single missing
+  `Settle` ack check, all three runs. Two caveats, stated plainly: the
+  `/chat/completions` endpoint forces `reasoning_effort: "none"` for function
+  tools, so this row is the model *with reasoning off*, and the full 66-run
+  eval cost ~$0.35 at $0.10/$0.50 per M tokens.
+- **Gemma-4-12B (weaker):** the value shows in the *pass rate itself* —
+  12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
+  p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs
+  exhaust the 25-step tool budget; the KB keeps a weak model inside it
+  (3/3 vs 2/3 on KB-sensitive `gateway-forward-completes`).
+- The tasks **stratify the models**: `settle-moves-money` (the prompt never
+  says *where* settlement money goes) is 3/3 for Qwen in both variants and
+  0/3 for Gemma in both. No single task discriminates; the set does. Two
+  tasks are KB-sensitive by construction — their ground truth lives only in
+  the intern guides, and the prompts never leak it.
+
+## What's in the repo
+
+| Layer | What | Where |
+|---|---|---|
+| **Test target** | C11 payments backend: 3 TCP processes, binary wire protocol, X-macro message tables, function-pointer dispatch, SQLite | `backend/` |
+| **Agent surface** | MCP server (stdio) — 15 tools: protocol introspection, suite CRUD, execution, read-only DB, KB search/read | `harness/src/mcp/` |
+| **Knowledge pipeline** | kb-forge: per-directory "intern guides" generated from source, deterministic retrieval, hash-pinned staleness gate | `harness/src/kb/` → `knowledge/` |
+| **Evaluation** | 11-task KB on/off harness — programmatic judge, independent re-run, per-model baselines — plus a recorded-trace replay gate | `harness/src/eval/` |
+| **App & CLI** | Electron/React GUI (suites, live run, registry, database) and a headless CLI over one shared, electron-free runner | `harness/src/` |
+| **One-command guarantee** | `npm run verify`: C build, ASan/UBSan smoke (28 checks), fmt, typecheck, unit tests, live suite, MCP A/B, replay gate, KB staleness | `harness/scripts/verify.sh` |
 
 ## Architecture
 
@@ -30,28 +93,29 @@ Registry → verified balances in the per-suite database:
 │                                                                                    │
 │  pay-orders :9101        ledger :9102            auth-gateway :9103                 │
 │  (payment lifecycle)     (double-entry)          (external auth/settle boundary)    │
-│      │                         ▲                     │        │                     │
+│      │                         ▲                     │          │                     │
 │      └── CompletePayment ──────┼─────────────────────┘   TransferFunds (settle)     │
-│                                └───────────────────────────────────────────┐        │
-│        ┌───────────────────────────────────────────────────────────────────▼──┐    │
-│        │ shared: envelope codec · TCP server + function-pointer dispatch table │    │
-│        │ SQLite (accounts, payments, ledger_entries, ledger_txns)              │    │
-│        └───────────────────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────────────────────────┘
+│                                └───────────────────────────────────────────────────┐│
+│        ┌──────────────────────────────────────────────────────────────────────────▼┐│
+│        │ shared: envelope codec · TCP server + function-pointer dispatch table     ││
+│        │ SQLite (accounts, payments, ledger_entries, ledger_txns)                  ││
+│        └──────────────────────────────────────────────────────────────────────────┘│
+└────────────────────────────────────────────────────────────────────────────────────┘
         ▲ wire protocol (8-byte LE header + packed payload)
-┌───────┴──────────────────────────────────────────────────────────────────────────────┐
-│ HARNESS (Electron + React + TS)                                                      │
-│  main:  backend cluster · registry (from --introspect) · runner (Node module,        │
-│         electron-free) · suite CRUD · read-only db · MCP server (stdio, 15 tools)    │
-│  renderer:  /suites  live run + step results + backend log                           │
-│             /registry  the introspected wire protocol                                │
-│             /database  read-only SQL over per-suite databases                        │
-└──────────────────────────────────────────────────────────────────────────────────────┘
-┌──────────────────────────── KNOWLEDGE LAYER (kb-forge) ─────────────────────────────┐
-│  knowledge/*.md intern guides (one per source dir): messages + side effects, risks, │
-│  inter-process interactions, domain vocabulary — generated, then committed          │
-│  consumers:  MCP test author (kb_search/kb_read/schema notes) · designer CLI        │
-└──────────────────────────────────────────────────────────────────────────────────────┘
+┌───────┴────────────────────────────────────────────────────────────────────────────┐
+│ HARNESS (Electron + React + TS)                                                    │
+│  main:  backend cluster · registry (from --introspect) · runner (Node module,      │
+│         electron-free) · suite CRUD · read-only db · MCP server (stdio, 15 tools)  │
+│  renderer:  /suites  live run + step results + backend log                         │
+│             /registry  the introspected wire protocol                              │
+│             /database  read-only SQL over per-suite databases                      │
+└────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│ KNOWLEDGE LAYER (kb-forge)                                                         │
+│  knowledge/*.md intern guides (one per source dir): messages + side effects,       │
+│  risks, inter-process interactions, domain vocabulary — generated, then committed  │
+│  consumers:  MCP test author (kb_search/kb_read/schema notes) · designer CLI       │
+└────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **The core trick.** Each C message is declared once as an X-macro field list
@@ -67,6 +131,29 @@ and the MCP schemas all derive from that one file.
 asserts real side effects — e.g. that an `Authorize` drives the payment to
 `complete` via the gateway's forward — while a schema-only agent stops at the
 local ack.
+
+## Why the test target is a real C system
+
+The backend is a deliberate stand-in for a complex multi-process C system.
+The shape is the point, the domain is not:
+
+- **Three long-lived TCP processes** that forward to each other
+  (pay-orders → ledger → auth-gateway), with fire-and-forget hops in the
+  middle
+- **A hand-rolled binary wire protocol** — 8-byte little-endian frame header
+  + packed payloads at exact `offsetof` offsets. No OpenAPI, no REST, no
+  framework emitting a schema
+- **X-macro message declarations** expanding into both the packed structs
+  *and* the metadata table; handlers wired as function-pointer dispatch
+  tables
+- **SQLite** as the only persistence, shared by all three processes
+- **Zero documentation.** The code is the only source of truth
+
+That is where LLM agents actually have to work — and where a knowledge base
+earns its keep, because there is no schema file to hand the model, only C.
+Everything in this repo (the introspected registry, the forged guides, the
+KB on/off measurement) is the answer to that environment, with numbers
+attached.
 
 ## Quickstart (macOS, Apple clang — tested)
 
@@ -96,142 +183,51 @@ HARNESS_SELF_TEST=1 npm start   # headless e2e self-test (drives the real UI)
 > (The committed harness uses Node's built-in `node:sqlite`, so only the
 > dev/build tooling needs approving.)
 
-## CI
+## The agent's world: an MCP surface designed for it
 
-GitHub Actions (`.github/workflows/verify.yml`) runs three jobs on every
-push/PR to `main`, plus the opt-in `eval` job in `eval.yml`:
+The premise: the agent is the **primary author** of the test suites, not a
+demo. Its entire world is 15 MCP tools (13 with `MCP_NO_KB=1` — the A/B
+switch the eval uses); there is no back door. Three design decisions do most
+of the work:
 
-| Job | What it runs |
-|---|---|
-| `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, `node:test` unit tests (codec round-trip, ack matching, KB search, suite validation, hostile-suite cases, read-only db), live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), recorded-trace replay of the agent surface (no LLM), KB staleness check. Run reports are uploaded as an artifact. |
-| `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
-| `docker` | builds the headless image (gcc C build, `npm ci`, registry-staleness diff) on Linux and proves it runs: one suite green + `eval:replay` inside the image. Also the "C builds with gcc" job. |
-| `eval` (opt-in, `eval.yml`) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist — on a schedule, on demand, and on pushes touching the agent surface. |
+- **Validated before it exists.** `create_suite` runs the suite through
+  registry validation before anything touches disk — unknown messages,
+  unknown fields, unknown processes, non-SELECT SQL, bad step shapes: all
+  rejected with a structured error. The agent cannot persist an invalid
+  suite; it can only see why.
+- **Errors as steering.** Failure text is written as an instruction the agent
+  can act on: `unknown message pay-orders/RefundPayment` comes back with
+  `kbHints` pointing at the relevant guide; the loop is author → run → read
+  the result → fix → re-run.
+- **Score the artifact, never the words.** The agent's own "it passed" is
+  never trusted: the generated suite is re-run on a fresh cluster and checked
+  against an exact ground-truth checklist. No LLM judge anywhere in the
+  scoring path.
 
-The harness is unit-tested with the built-in `node:test` runner (`npm run
-test:unit`, 23 tests, no test framework added — the repo's npm policy blocks
-install scripts by default).
+Full design rationale — including what was **tried and rejected** (vector
+retrieval, LLM-judged scoring, a supervisor loop) and why — is in
+[`docs/agent.md`](docs/agent.md).
 
-## Docker
+## Keeping the agent harmless
 
-Headless image (the Electron GUI is deliberately absent — demo surface,
-not product; a stale `registry.json` fails the build):
+The uncomfortable fact up front: **the agent writes raw SQL that executes
+against the backend database, and can SIGKILL backend processes** (failure-
+mode and chaos tests need both). The design goal is not to make those
+capabilities impossible — it is to make the *worst case harmless*,
+structurally, rather than relying on the model behaving:
 
-```bash
-docker build -t payments-harness .
-docker run --rm payments-harness run:cli -- suites/payment-happy-path.json   # one suite, fresh cluster + db
-docker run -i --rm payments-harness mcp                                      # MCP server over stdio
-```
+1. **Validate at authoring** — only `SELECT`/`WITH`, single-statement SQL,
+   registry-validated steps, charset-locked suite names.
+2. **Contain at execution** — the db path runs on a *read-only* driver
+   connection; kills target only the child PIDs of the disposable cluster the
+   runner spawned, never a pid the agent supplies.
+3. **Blast radius does the rest** — every run gets a fresh cluster + fresh
+   database; nothing long-lived exists to damage.
 
-The CI `docker` job (Linux) builds it and proves one suite + the
-replay gate green inside. What's in/out and MCP client config:
-[`docker/README.md`](docker/README.md).
-
-## Benchmark
-
-`npm run bench` starts a fresh backend cluster, sends sequential
-`TransferFunds` (one in flight) from a single client, and reports throughput
-plus ack-latency percentiles. Each op is a full round trip: framed request
-out, C handler executes (SQLite read → validate → commit), framed ack back.
-500 measured ops after 50 warmup, three runs on the author's laptop
-(Apple Silicon, macOS):
-
-| ops | throughput | p50 | p95 | p99 | max |
-|---|---|---|---|---|---|
-| 500 | 8,233/s | 99 μs | 165 μs | 271 μs | 2.59 ms |
-| 500 | 8,677/s | 90 μs | 161 μs | 350 μs | 2.70 ms |
-| 500 | 8,445/s | 96 μs | 150 μs | 389 μs | 2.65 ms |
-
-Read this as "protocol + single-threaded SQLite commit cost over loopback
-on one machine", not a scaling claim: each run is one client against a fresh
-three-process cluster.
-
-## Evaluation — does the knowledge base actually make a difference?
-
-The GIF is one unedited session; the eval is the controlled experiment
-behind it. `harness/src/eval/` runs a model-agnostic agent (OpenAI-
-compatible chat + the same 15 MCP tools an external client would use)
-through 11 plain-English tasks, each with **KB on** vs **KB off**
-(`MCP_NO_KB=1`) — and scores the artifact, not the agent's word: the
-generated suite is re-run on a fresh cluster and checked against an exact
-ground-truth checklist (seed-data balance math, ack status codes,
-side-effect rows). No LLM judge. `pass` = suite created + green re-run +
-full checklist.
-
-```bash
-npm run eval:smoke            # 3 tasks x 1 run x both variants
-npm run eval                  # 11 tasks x 3 runs x both variants
-```
-
-Committed results — two local models via llama.cpp on a LAN GPU box plus one
-hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0.
-Trimmed full-fidelity samples (agent-authored suites intact, tool results
-truncated) in [`sample-qwen3-27b.json`](harness/eval-reports/sample-qwen3-27b.json),
-[`sample-gpt-6-luna.json`](harness/eval-reports/sample-gpt-6-luna.json), and
-[`sample-gemma-12b.json`](harness/eval-reports/sample-gemma-12b.json):
-
-| model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) |
-|---|---|---|---|---|---|---|---|---|---|
-| **Qwen3.8-27B Q4_K_M** (the GIF's model) | **kb-on** | **33/33** | 33/33 | 33/33 | 13.2 | **1.0** | 13 | 53,285 / 1,098 | 0.0000 |
-| Qwen3.8-27B Q4_K_M | kb-off | 32/33 | 32/33 | 32/33 | 14.6 | 1.3 | 11 | 48,993 / 1,311 | 0.0000 |
-| gpt-6-luna (hosted, OpenAI) | kb-on | 20/33 | 30/33 | 20/33 | 13.7 | 1.1 | 13 | 35,298 / 809 | 0.0039 |
-| gpt-6-luna (hosted, OpenAI) | kb-off | 22/33 | 28/33 | 22/33 | 22.2 | 1.1 | 19 | 58,118 / 955 | 0.0063 |
-| Gemma-4-12B QAT Q4_0 | **kb-on** | **12/33** | 21/33 | 15/33 | 14.4 | 0.9 | 14 | 87,127 / 2,555 | n/a |
-| Gemma-4-12B QAT Q4_0 | kb-off | 8/33 | 14/33 | 8/33 | 18.1 | 0.8 | 50 | 96,361 / 4,122 | n/a |
-
-What the numbers say, honestly — the KB's measurable value **moves from
-efficiency to pass-or-fail as the model gets weaker**:
-
-- **Qwen3-27B (strong):** pass rate saturates (33 vs 32); the value shows
-  as *efficiency* — one-shot suites (1.0 vs 1.3 re-runs), fewer tool calls
-  (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
-  class of miss the KB exists to prevent.
-- **gpt-6-luna (hosted frontier):** pass rate is a wash (20 vs 22, within
-  run noise) — a strong model infers the protocol from introspection alone.
-  But on the two KB-sensitive tasks the KB still pays (3/3 vs 1/3 on
-  `gateway-forward-completes`, 3/3 vs 2/3 on `settle-moves-money`), and the
-  failure mode changes shape: instead of exhausting the 25-step tool budget
-  (Gemma's miss), it writes a *functionally correct* suite that drops one
-  ground-truth assertion — `happy-path` kb-on is 0/3 on a single missing
-  `Settle` ack check, all three runs. Two caveats, stated plainly: the
-  `/chat/completions` endpoint forces `reasoning_effort: "none"` for function
-  tools, so this row is the model *with reasoning off*, and the full 66-run
-  eval cost ~$0.35 at $0.10/$0.50 per M tokens.
-- **Gemma-4-12B (weaker):** the value shows in the *pass rate itself* —
-  12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
-  p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs
-  exhaust the 25-step tool budget; the KB keeps a weak model inside it
-  (3/3 vs 2/3 on KB-sensitive `gateway-forward-completes`).
-- The tasks **stratify the models**: `settle-moves-money` (the prompt never
-  says *where* settlement money goes) is 3/3 for Qwen in both variants and
-  0/3 for Gemma in both. No single task discriminates; the set does. Two
-  tasks are KB-sensitive by construction — their ground truth lives only in
-  the intern guides, and the prompts never leak it.
-
-Methodology, task set, and how to add tasks: [`docs/eval.md`](docs/eval.md).
-
-The eval doubles as a regression gate in two layers. **Layer A**
-(`npm run eval:replay`, in `npm run verify`, ~4 s, no LLM) replays recorded
-agent tool-call traces against the live MCP server and asserts properties of
-each result — catching tool renames, KB content regressions, and
-error-message wording changes on every push. **Layer B**
-(`.github/workflows/eval.yml`) runs the full eval and fails on regression
-below the per-model baseline in `harness/src/eval/baseline.json`; opt-in via
-the `EVAL_RUN_EVAL` repository variable + `EVAL_API_*` secrets.
-
-## The wire protocol
-
-Little-endian frame: `u16 magic (0x5046) | u16 msg_id | u32 payload_len |
-payload[]`; payloads are packed structs at the exact `offsetof` offsets.
-
-| process | port | in messages | out messages |
-|---|---|---|---|
-| pay-orders | 9101 | CreatePayment (10) · CancelPayment (11) · CompletePayment (12) | PaymentAck (20) |
-| ledger | 9102 | TransferFunds (30) · ReverseTransfer (31) | TransferAck (32) |
-| auth-gateway | 9103 | Authorize (40) · Settle (41) | AuthResponse (42) · SettleAck (43) |
-| all | — | — | ErrorAck (255) |
-
-Full field tables, offsets, and ack status codes: [`docs/protocol.md`](docs/protocol.md).
+Every hostile case is a committed test, and the same hostile inputs are
+replayed through the live MCP server on every push (the Layer A gate below).
+Threat table, the three layers in code, and the honest residual risks:
+[`docs/security.md`](docs/security.md).
 
 ## Test suites
 
@@ -288,6 +284,59 @@ Reports are off by default so routine runs (and the 66-run eval) don't
 litter the tree; flip the flag when you want an artifact of a run to
 attach to a bug report or a review.
 
+## The wire protocol
+
+Little-endian frame: `u16 magic (0x5046) | u16 msg_id | u32 payload_len |
+payload[]`; payloads are packed structs at the exact `offsetof` offsets.
+
+| process | port | in messages | out messages |
+|---|---|---|---|
+| pay-orders | 9101 | CreatePayment (10) · CancelPayment (11) · CompletePayment (12) | PaymentAck (20) |
+| ledger | 9102 | TransferFunds (30) · ReverseTransfer (31) | TransferAck (32) |
+| auth-gateway | 9103 | Authorize (40) · Settle (41) | AuthResponse (42) · SettleAck (43) |
+| all | — | — | ErrorAck (255) |
+
+Full field tables, offsets, and ack status codes: [`docs/protocol.md`](docs/protocol.md).
+
+## Evaluation — methodology and gates
+
+The GIF is one unedited session; the eval is the controlled experiment
+behind it. `harness/src/eval/` runs a model-agnostic agent (OpenAI-
+compatible chat + the same 15 MCP tools an external client would use)
+through 11 plain-English tasks, each with **KB on** vs **KB off**
+(`MCP_NO_KB=1`) — and scores the artifact, not the agent's word: the
+generated suite is re-run on a fresh cluster and checked against an exact
+ground-truth checklist (seed-data balance math, ack status codes,
+side-effect rows). No LLM judge. `pass` = suite created + green re-run +
+full checklist.
+
+```bash
+npm run eval:smoke            # 3 tasks x 1 run x both variants
+npm run eval                  # 11 tasks x 3 runs x both variants
+npm run eval -- --variant three-way --runs 10 --seed 42
+# three-way = kb-on, kb-content-off (same KB tool names, empty content), kb-off
+```
+
+Interpret the existing `kb-on` versus `kb-off` comparison as two complete
+agent configurations: the KB-off server removes tools as well as knowledge.
+The added `kb-content-off` condition preserves KB tool names but returns
+empty search/read content. It is a better control, not a perfect causal
+isolation. Use `--variant three-way --runs 10 --seed 42` to run all three
+conditions. A seed helps reproduce requests on compatible endpoints, but
+does not guarantee deterministic generation.
+
+The eval doubles as a regression gate in two layers. **Layer A**
+(`npm run eval:replay`, in `npm run verify`, ~4 s, no LLM) replays recorded
+agent tool-call traces against the live MCP server and asserts properties of
+each result — catching tool renames, KB content regressions, and
+error-message wording changes on every push. **Layer B**
+(`.github/workflows/eval.yml`) runs the full eval and fails on regression
+below the per-model baseline in `harness/src/eval/baseline.json`; opt-in via
+the `EVAL_RUN_EVAL` repository variable + `EVAL_API_*` secrets.
+
+Methodology, task set, report format, and how to add tasks:
+[`docs/eval.md`](docs/eval.md).
+
 ## Knowledge pipeline
 
 ```bash
@@ -306,18 +355,68 @@ Risks / Inter-process interactions). Consumers:
 
 - **MCP test author** — `kb_search`/`kb_read` tools; `get_message_schema`
   carries the KB row as `notes`; `create_suite` failures carry `kbHints`.
-  `MCP_NO_KB=1` disables it all (the A/B switch the [eval](#evaluation--does-the-knowledge-base-actually-make-a-difference)
-  uses to measure the difference). → [`docs/mcp.md`](docs/mcp.md)
+  `MCP_NO_KB=1` disables it all (the A/B switch the
+  [eval](#evaluation--methodology-and-gates) uses to measure the
+  difference). → [`docs/mcp.md`](docs/mcp.md)
 - **Designer** — turns a plain-English change request into a reviewable
   design doc (X-macro proposal, handler sketch, risks citing `knowledge/`
   paths, suggested suite). Sample outputs: [`docs/designs/`](docs/designs/).
 
 → [`docs/knowledge.md`](docs/knowledge.md)
 
+## CI
+
+GitHub Actions (`.github/workflows/verify.yml`) runs three jobs on every
+push/PR to `main`, plus the opt-in `eval` job in `eval.yml`:
+
+| Job | What it runs |
+|---|---|
+| `verify` | the *exact* one-command check developers run locally (`npm run verify`): C build with `-Werror`, ASan/UBSan build + 28-check protocol smoke, `clang-format --dry-run` (pinned to 23.1.3 — formatting is version-sensitive), typecheck, `node:test` unit tests (codec round-trip, ack matching, KB search, suite validation, hostile-suite cases, read-only db), live happy-path suite against a fresh cluster, MCP author A/B (KB on vs `MCP_NO_KB=1`), recorded-trace replay of the agent surface (no LLM), KB staleness check. Run reports are uploaded as an artifact. |
+| `e2e` | builds the app, loads the real Electron window under Xvfb, then drives the renderer through the actual preload bridge: `listSuites` + `runSuite('payment-happy-path')`. Non-zero exit on any failure. |
+| `docker` | builds the headless image (gcc C build, `npm ci`, registry-staleness diff) on Linux and proves it runs: one suite green + `eval:replay` inside the image. Also the "C builds with gcc" job. |
+| `eval` (opt-in, `eval.yml`) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist — on a schedule, on demand, and on pushes touching the agent surface. |
+
+The harness is unit-tested with the built-in `node:test` runner (`npm run
+test:unit`, 23 tests, no test framework added — the repo's npm policy blocks
+install scripts by default).
+
+## Docker
+
+Headless image (the Electron GUI is deliberately absent — demo surface,
+not product; a stale `registry.json` fails the build):
+
+```bash
+docker build -t payments-harness .
+docker run --rm payments-harness run:cli -- suites/payment-happy-path.json   # one suite, fresh cluster + db
+docker run -i --rm payments-harness mcp                                      # MCP server over stdio
+```
+
+The CI `docker` job (Linux) builds it and proves one suite + the
+replay gate green inside. What's in/out and MCP client config:
+[`docker/README.md`](docker/README.md).
+
+## Benchmark
+
+`npm run bench` starts a fresh backend cluster, sends sequential
+`TransferFunds` (one in flight) from a single client, and reports throughput
+plus ack-latency percentiles. Each op is a full round trip: framed request
+out, C handler executes (SQLite read → validate → commit), framed ack back.
+500 measured ops after 50 warmup, three runs on the author's laptop
+(Apple Silicon, macOS):
+
+| ops | throughput | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|
+| 500 | 8,233/s | 99 μs | 165 μs | 271 μs | 2.59 ms |
+| 500 | 8,677/s | 90 μs | 161 μs | 350 μs | 2.70 ms |
+| 500 | 8,445/s | 96 μs | 150 μs | 389 μs | 2.65 ms |
+
+Read this as "protocol + single-threaded SQLite commit cost over loopback
+on one machine", not a scaling claim: each run is one client against a fresh
+three-process cluster.
+
 ## The 6-minute demo
 
 (Quick version: the half-speed GIF at the top — step 5 is the part it plays live.)
-
 
 1. **0:00 Build & introspect.** `make -C backend && npm run gen:registry` —
    "the registry is generated from the C function-pointer tables, not
@@ -349,7 +448,7 @@ backend/
   include/pay/        envelope, X-macro message defs, dispatch table, db, socket
   src/common/         codec, TCP server + dispatch, introspection, sqlite, log
   src/pay_orders/     payment lifecycle (:9101)
-  src/ledger/         double-entry ledger (:9102)
+  src/ledger/        double-entry ledger (:9102)
   src/auth_gateway/   auth/settle boundary (:9103) + forwarding
   db/schema.sql       accounts, payments, ledger_entries, ledger_txns (+seed)
   tools/smoke_test.py 28-check protocol test (part of `make check`)

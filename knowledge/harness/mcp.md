@@ -1,6 +1,6 @@
 # harness/src/mcp — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-14T00:29:47.443Z · kb-forge 0.2 · source sha256:5a4d5d930e90
+> written by Qwen3 (local, via pi coding agent) · generated 2026-10-14T03:41:56.458Z · kb-forge 0.2 · source sha256:30b34fb9a4a0
 
 ## Purpose
 
@@ -10,7 +10,7 @@ The Model Context Protocol server (stdio). This is the agent-facing API: protoco
 
 | file | ~lines |
 |---|---|
-| kbTools.ts | 75 |
+| kbTools.ts | 80 |
 | server.ts | 282 |
 
 ## Domain vocabulary
@@ -26,10 +26,11 @@ The Model Context Protocol server (stdio). This is the agent-facing API: protoco
 | function | defined at |
 |---|---|
 | `kbEnabled` | kbTools.ts:14 |
-| `text(payload: unknown)` | kbTools.ts:18 |
-| `registerKbTools(server: McpServer)` | kbTools.ts:22 |
-| `messageKbNotes(processName: string, messageName: string)` | kbTools.ts:57 |
-| `kbHintsFor(messageOrField: string)` | kbTools.ts:71 |
+| `kbContentEnabled` | kbTools.ts:19 |
+| `text(payload: unknown)` | kbTools.ts:23 |
+| `registerKbTools(server: McpServer)` | kbTools.ts:27 |
+| `messageKbNotes(processName: string, messageName: string)` | kbTools.ts:62 |
+| `kbHintsFor(messageOrField: string)` | kbTools.ts:76 |
 | `text(payload: unknown)` | server.ts:38 |
 | `suiteFile(name: string)` | server.ts:46 |
 | `runSuiteByName(name: string)` | server.ts:183 |

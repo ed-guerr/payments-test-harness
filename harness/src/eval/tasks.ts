@@ -19,6 +19,7 @@ import type { EvalTask } from "./types";
 export const TASKS: EvalTask[] = [
   {
     id: "happy-path",
+    categories: ["lifecycle", "cross-process"],
     prompt:
       "Make a test for the full lifecycle of a payment: create a 50000-cent payment on ACCT-001 (USD), get it externally authorized, settle it, and verify the payment's final status and that the money landed in the RESERVE account.",
     suiteName: "eval-happy-path",
@@ -33,6 +34,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "double-settle-rejection",
+    categories: ["negative", "idempotency"],
     prompt:
       "Verify that a payment can only be settled once: set up and settle a 50000-cent payment on ACCT-001, attempt a second settlement, and assert that the second one is rejected and that no extra money moved into the RESERVE account.",
     suiteName: "eval-double-settle-rejection",
@@ -45,6 +47,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "insufficient-funds",
+    categories: ["negative", "ledger"],
     prompt:
       "Create a payment on ACCT-002 for more than its balance, then try to move that amount from ACCT-002 via the ledger. Assert that the ledger rejects the transfer and that nothing moved.",
     suiteName: "eval-insufficient-funds",
@@ -57,6 +60,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "cancel-payment",
+    categories: ["lifecycle", "negative"],
     prompt:
       "Create a 1000-cent payment on ACCT-002, cancel it, then try to authorize it. Assert that the payment is cancelled, that no money moved, and that the authorization is refused.",
     suiteName: "eval-cancel-payment",
@@ -71,6 +75,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "reversal-chain",
+    categories: ["ledger", "reversal"],
     prompt:
       "Test that ledger reversals are per-transaction and work out of order: transfer 10000 from ACCT-001 to ACCT-002 (txn 9001), 5000 from ACCT-002 to ACCT-001 (txn 9002), and 3000 from ACCT-001 to ACCT-002 (txn 9003). Then reverse txn 9001 and txn 9003 — but not 9002. Assert the final balances: ACCT-001 505000, ACCT-002 245000.",
     suiteName: "eval-reversal-chain",
@@ -83,6 +88,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "chaos-kill-ledger",
+    categories: ["chaos", "resilience"],
     prompt:
       "Chaos test: transfer 2500 cents from ACCT-001 to ACCT-002 (txn 9101) and verify it applied. Then SIGKILL the ledger process. Then attempt another ledger transfer and assert it fails, create a payment on pay-orders and assert it still succeeds, and assert the balances are exactly the post-first-transfer values (ACCT-001 497500, ACCT-002 252500).",
     suiteName: "eval-chaos-kill-ledger",
@@ -98,6 +104,7 @@ export const TASKS: EvalTask[] = [
   {
     id: "gateway-forward-completes",
     kbSensitive: true,
+    categories: ["cross-process", "knowledge-dependent"],
     prompt:
       "Make a test that verifies an external authorization completes a payment.",
     suiteName: "eval-gateway-forward-completes",
@@ -110,6 +117,7 @@ export const TASKS: EvalTask[] = [
   {
     id: "settle-moves-money",
     kbSensitive: true,
+    categories: ["cross-process", "knowledge-dependent"],
     prompt:
       "Make a test that verifies settlement of a 50000-cent payment on ACCT-001: set the payment up so it is settleable, settle it, and verify the settlement actually moved the money where it goes.",
     suiteName: "eval-settle-moves-money",
@@ -121,6 +129,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "settle-then-reverse",
+    categories: ["ledger", "reversal", "cross-process"],
     prompt:
       "Settle a payment, then reverse its settlement: create a 50000-cent payment on ACCT-001, authorize it, settle it, then reverse the settlement transfer on the ledger. Assert the RESERVE account is back to its seed balance (1000000) and ACCT-001 is back to 500000.",
     suiteName: "eval-settle-then-reverse",
@@ -133,6 +142,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "unknown-account",
+    categories: ["negative", "validation"],
     prompt:
       "Verify that creating a payment for an account that does not exist (e.g. ACCT-999) is rejected with the account-not-found status, and that no payment row is created for it.",
     suiteName: "eval-unknown-account",
@@ -144,6 +154,7 @@ export const TASKS: EvalTask[] = [
   },
   {
     id: "interleaved-payments",
+    categories: ["lifecycle", "cross-process", "multiple-entities"],
     prompt:
       "Two interleaved payments: create a 20000-cent payment on ACCT-001 (txn 9201) and a 10000-cent payment on ACCT-002 (txn 9202). Authorize and settle both. Assert that both payments end settled and that the RESERVE account received both amounts (final balance 1030000).",
     suiteName: "eval-interleaved-payments",

@@ -20,6 +20,12 @@ experiment behind it.
 #   EVAL_RUN_TIMEOUT_MS (default 900000)
 #   EVAL_THINKING=1  enable Qwen-style reasoning tokens (default off)
 
+# Hosted APIs: the client auto-detects two OpenAI quirks on the first 400
+# and retries — it drops the Qwen template parameter OpenAI rejects, and
+# sets reasoning_effort:"none" for reasoning models that refuse function
+# tools in /chat/completions (gpt-6-luna). So such models are evaluated with
+# reasoning off on this endpoint; no extra env var needed.
+
 npm run eval            # 11 tasks x 3 runs x {kb-on, kb-off} + baseline gate
 npm run eval:smoke      # 3 tasks x 1 run x both variants (fast sanity)
 npm run eval:replay     # Layer A gate: recorded traces, no model (~4 s)
@@ -167,6 +173,8 @@ llama.cpp server for the committed result. There is no API cost for a local
 model (the report's `total cost (usd)` column is 0.0000 from the committed price
 table in `src/eval/pricing.ts`); for hosted providers that column is what
 you bill against, and an unpriced model reports `n/a` rather than a guess.
+Concrete hosted example: the committed gpt-6-luna full run (66 agent runs,
+OpenAI at $0.10/$0.50 per M tokens) billed **$0.34** in total.
 
 ## Regression gate (R2)
 

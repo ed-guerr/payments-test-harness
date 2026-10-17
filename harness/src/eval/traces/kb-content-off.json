@@ -1,0 +1,24 @@
+{
+  "id": "kb-content-off-surface",
+  "source": "synthetic tool-surface invariant for the content-only ablation",
+  "noKb": false,
+  "contentOff": true,
+  "calls": [
+    {
+      "tool": "kb_search",
+      "args": { "query": "authorization completes payment" },
+      "expect": {
+        "ok": true,
+        "contains": ["[]"]
+      }
+    },
+    {
+      "tool": "get_message_schema",
+      "args": { "process": "auth-gateway", "message": "Authorize" },
+      "expect": {
+        "ok": true,
+        "notContains": ["side effect"]
+      }
+    }
+  ]
+}

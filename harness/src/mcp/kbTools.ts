@@ -15,6 +15,11 @@ export function kbEnabled(): boolean {
   return process.env.MCP_NO_KB !== "1";
 }
 
+/** Content-only ablation: expose KB tools/schema but return no retrieved knowledge. */
+export function kbContentEnabled(): boolean {
+  return process.env.MCP_KB_CONTENT_OFF !== "1";
+}
+
 function text(payload: unknown): { content: { type: "text"; text: string }[] } {
   return { content: [{ type: "text", text: typeof payload === "string" ? payload : JSON.stringify(payload, null, 2) }] };
 }
@@ -30,7 +35,7 @@ export function registerKbTools(server: McpServer): void {
         limit: z.number().int().min(1).max(20).optional().describe("max sections (default 5)"),
       },
     },
-    ({ query, limit }) => text(kbSearch(query, limit ?? 5)),
+    ({ query, limit }) => text(kbContentEnabled() ? kbSearch(query, limit ?? 5) : []),
   );
 
   server.registerTool(
@@ -42,7 +47,7 @@ export function registerKbTools(server: McpServer): void {
         section: z.string().optional().describe("section title, e.g. 'Messages'"),
       },
     },
-    ({ path: p, section }) => text(kbRead(p, section)),
+    ({ path: p, section }) => text(kbContentEnabled() ? kbRead(p, section) : ""),
   );
 }
 
@@ -55,7 +60,7 @@ const GUIDE_FOR_PROCESS: Record<string, string> = {
 
 /** KB "notes" for a message (precondition + side effect) for get_message_schema. */
 export function messageKbNotes(processName: string, messageName: string): string | null {
-  if (!kbEnabled()) return null;
+  if (!kbEnabled() || !kbContentEnabled()) return null;
   const guide = GUIDE_FOR_PROCESS[processName];
   if (!guide) return null;
   try {
@@ -69,6 +74,6 @@ export function messageKbNotes(processName: string, messageName: string): string
 
 /** Top KB hits for a failing message/field, attached to create_suite errors. */
 export function kbHintsFor(messageOrField: string): string[] {
-  if (!kbEnabled()) return [];
+  if (!kbEnabled() || !kbContentEnabled()) return [];
   return kbSearch(messageOrField, 3).map((h) => `${h.path} :: ${h.section}`);
 }

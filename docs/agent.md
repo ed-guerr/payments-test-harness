@@ -136,7 +136,13 @@ fields alone.
   (`src/eval/types.ts`), so any committed number is reproducible in one
   command (`docs/eval.md`).
 - `EVAL_THINKING` (default off) controls Qwen-style reasoning tokens; the
-  committed numbers are with thinking off.
+  committed numbers are with thinking off. Two hosted-API quirks are
+  auto-detected on the first 400 and retried, no extra env var needed:
+  OpenAI rejects the Qwen template parameter (retried without it), and
+  reasoning models like `gpt-6-luna` refuse function tools in
+  `/chat/completions` unless `reasoning_effort: "none"` is set (retried with
+  it). The latter means such models are evaluated with reasoning off in this
+  endpoint — see `docs/eval.md` for the trade-off.
 - Per-model regression baselines are committed data:
   `harness/src/eval/baseline.json` (roadmap R2 Layer B). A model swap is
   therefore a *measurable event*: run the eval, compare against that
