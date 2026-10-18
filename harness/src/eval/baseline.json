@@ -12,9 +12,9 @@
       "no_kb": { "pass": 29, "total": 110 }
     },
     "gpt-6-luna": {
-      "source": "full eval run 2026-10-14 — gpt-6-luna via OpenAI /v1/chat/completions, temp 0, 3 runs/task. The endpoint forces reasoning_effort \"none\" for function tools, so this model is baselined with reasoning off — a Responses-API run (reasoning on) is a different configuration and should be re-baselined deliberately",
-      "kb": { "pass": 20, "total": 33 },
-      "no_kb": { "pass": 22, "total": 33 }
+      "source": "three-way full eval 2026-10-17 — gpt-6-luna via OpenAI /v1/chat/completions, temp 0, seed 42, 10 runs/task. The endpoint forces reasoning_effort \"none\" for function tools, so this model is baselined with reasoning off — a Responses-API run (reasoning on) is a different configuration and should be re-baselined deliberately. Re-baselined: the 10-run config replaced the 2026-10-14 3-run baseline (20/33, 22/33). Three infra-hit (task, condition) pairs (hosted-connection stalls) were re-run and taken whole from the patch runs — the OpenAI seed is best-effort, not deterministic, so re-running a slot redraws the whole pair: kb-on double-settle-rejection + interleaved-payments from artifacts/eval/2026-10-18T00-16-01-gpt-6-luna.json, kb-off settle-moves-money from artifacts/eval/2026-10-18T00-31-44-gpt-6-luna.json. kb-content-off (86/110) deliberately NOT baselined — single measurement, per the re-baseline policy. Expect run-to-run spread of a few points on hosted re-runs (non-deterministic endpoint), not exact-count stability. Source report: artifacts/eval/2026-10-17T22-58-19-gpt-6-luna.json (330 attempts, full traces)",
+      "kb": { "pass": 79, "total": 110 },
+      "no_kb": { "pass": 90, "total": 110 }
     }
   }
 }
