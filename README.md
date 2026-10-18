@@ -65,7 +65,10 @@ KB**:
   `Settle` ack check, all three runs. Two caveats, stated plainly: the
   `/chat/completions` endpoint forces `reasoning_effort: "none"` for function
   tools, so this row is the model *with reasoning off*, and the full 66-run
-  eval cost ~$0.35 at $0.10/$0.50 per M tokens.
+  eval cost ~$0.35 at $0.10/$0.50 per M tokens. The 10-run three-way below
+  settles both caveats. The wash holds, 79 vs 90 with overlapping CIs.
+  Neither KB-sensitive task separates anymore, both are 10/10 on kb-off.
+  The dead-tools penalty stays on the 12B.
 - **Gemma-4-12B (weaker):** the value shows in the *pass rate itself* —
   12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
   p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs
@@ -74,8 +77,8 @@ KB**:
   three-way below shows the ~36% ceiling is stable across runs, and that the
   misses are recovery failures, not knowledge gaps.
 - The tasks **stratify the models**: `settle-moves-money` (the prompt never
-  says *where* settlement money goes) is 3/3 for Qwen in both variants and
-  0/3 for Gemma in both. No single task discriminates; the set does. Two
+  says *where* settlement money goes) is 3/3 for Qwen in both variants,
+  9/6/8 for Luna across the three conditions, and 0/3 for Gemma in both. No single task discriminates; the set does. Two
   tasks are KB-sensitive by construction — their ground truth lives only in
   the intern guides, and the prompts never leak it.
 
@@ -158,6 +161,48 @@ model-size effect, not a harness artifact. Scrubbed traces of all three
 failure shapes: [`sample-trace-gemma-shallow.md`](artifacts/eval/sample-trace-gemma-shallow.md),
 [`sample-trace-gemma-retry-loop.md`](artifacts/eval/sample-trace-gemma-retry-loop.md),
 [`sample-trace-gemma-no-repair.md`](artifacts/eval/sample-trace-gemma-no-repair.md).
+
+### The same three ways, at the frontier (10 runs per task)
+
+gpt-6-luna ran the same three-way on 2026-10-17. The Oct 14 three-run
+run is the row above, and the endpoint is reasoning off, as before.
+Two data-quality notes, stated plainly. The first 10-run attempt lost
+14 runs to connection stalls. A bare fetch can only die on those, so
+the client now has an explicit per-request timeout plus retries. Three
+(task, condition) pairs still had bad runs, so we re-ran them and took
+the whole pairs from the patch runs. The OpenAI seed is best effort,
+not deterministic. The patch run redrew 10 of the 27 other slots in
+those pairs. So the numbers below are distribution level, not per run.
+
+| condition | pass | 95% CI | tool calls (mean) | suite reruns (mean) |
+|---|---|---|---|---|
+| kb-on | 79/110 | 63–79% | 13.5 | 1.1 |
+| kb-content-off | 86/110 | 70–85% | 13.4 | 1.6 |
+| kb-off | 90/110 | 74–88% | 18.4 | 1.4 |
+
+71.8% with the KB, 81.8% without. All three CIs overlap, and the
+gradient, if anything, runs the wrong way, with kb-on the lowest of the
+three. At the frontier the KB is a pass-rate wash. The two questions
+the 3-run data left open both close. The dead-tools penalty does not
+carry up the capability ladder. On Gemma, `kb-content-off` (10/110) is
+far below `kb-off` (29/110), and the CIs do not overlap. On Luna it is
+the best condition, 86/110 vs 79/110 for kb-on. With Qwen3 in the
+middle, where content-off equals kb-on at 110/110, the dead-tools
+effect is a small-model thing, not a property of the tool surface. And
+both KB-sensitive tasks stop separating the models.
+`gateway-forward-completes` is 10/10 in every condition, and the 1/3
+kb-off from the 3-run data was just n=3 noise. `unknown-account`, the
+task that cost Qwen3-27B its only 10-run miss, is also 10/10 in every
+condition. The frontier model infers the protocol from introspection
+alone, status codes included. The residual KB effect lives in one
+task. `settle-moves-money` goes 9/6/8 across the conditions. The
+frontier has its own failure shape, to go with the 12B's retry loops.
+`chaos-kill-ledger` fails 6/10 in both `kb-on` and `kb-off`, and it is
+always the same two missing checklist items, the final `accounts`
+balance assertions at 497,500 and 252,500 cents. The suite runs green
+but never checks where the money landed. That is the assertion
+discipline miss the 3-run `happy-path` 5/6 hint was pointing at, now
+measured.
 
 ## What's in the repo
 
