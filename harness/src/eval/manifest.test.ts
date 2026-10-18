@@ -15,6 +15,8 @@ const config: EvalConfig = {
   taskIds: ["happy-path"],
   outDir: "/tmp/eval-manifest-test",
   runTimeoutMs: 1000,
+  chatTimeoutMs: 1000,
+  chatRetries: 0,
 };
 
 const tasks = TASKS.filter((t) => t.id === "happy-path");

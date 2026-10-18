@@ -8,6 +8,8 @@
  *   EVAL_TEMPERATURE   default 0
  *   EVAL_MAX_TOOL_STEPS default 25
  *   EVAL_RUN_TIMEOUT_MS default 900000 (15 min per agent run)
+ *   EVAL_CHAT_TIMEOUT_MS default 600000 (per /chat/completions request)
+ *   EVAL_CHAT_RETRIES     default 2 (fetch-level stalls/timeouts)
  *
  * Flags:
  *   --smoke                 3 tasks (incl. the KB-sensitive one) x 1 run, both variants
@@ -168,6 +170,8 @@ async function main(): Promise<void> {
     taskIds: f.tasks,
     outDir: f.out,
     runTimeoutMs: Number(process.env.EVAL_RUN_TIMEOUT_MS ?? 900000),
+    chatTimeoutMs: Number(process.env.EVAL_CHAT_TIMEOUT_MS ?? 600000),
+    chatRetries: Number(process.env.EVAL_CHAT_RETRIES ?? 2),
   };
   const tasks = f.tasks.map(taskById);
   console.log(
@@ -183,6 +187,8 @@ async function main(): Promise<void> {
       apiKey: f.key,
       temperature: config.temperature,
       maxToolSteps: config.maxToolSteps,
+      chatTimeoutMs: config.chatTimeoutMs,
+      chatRetries: config.chatRetries,
       ...(f.seed === null ? {} : { seed: f.seed }),
     },
     tasks,

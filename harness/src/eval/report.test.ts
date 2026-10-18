@@ -14,6 +14,8 @@ const config: EvalConfig = {
   taskIds: ["task-a"],
   outDir: "/tmp/eval-report-test",
   runTimeoutMs: 1000,
+  chatTimeoutMs: 1000,
+  chatRetries: 0,
 };
 
 function run(run: number, pass: boolean): TaskRunRecord {

@@ -20,6 +20,8 @@ const config: EvalConfig = {
   taskIds: ["task-a"],
   outDir: "/tmp/eval-report-test",
   runTimeoutMs: 60000,
+  chatTimeoutMs: 60000,
+  chatRetries: 0,
 };
 
 function rec(step: number, name: string, args: unknown, ok: boolean, text: string): ToolCallRecord {

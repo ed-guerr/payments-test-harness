@@ -167,6 +167,10 @@ export interface EvalConfig {
   taskIds: string[];
   outDir: string;
   runTimeoutMs: number;
+  /** Per-request timeout for /chat/completions (ms). */
+  chatTimeoutMs: number;
+  /** Retries for fetch-level failures (network stall/timeout). */
+  chatRetries: number;
 }
 
 /**

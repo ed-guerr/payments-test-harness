@@ -33,6 +33,10 @@ export interface AgentConfig {
   maxToolSteps: number;
   /** Per-agent-loop seed; optional if the endpoint does not support it. */
   seed?: number;
+  /** Per-request timeout for /chat/completions (default 600000). */
+  chatTimeoutMs?: number;
+  /** Retries for fetch-level failures (stalls/timeouts); default 2. */
+  chatRetries?: number;
 }
 
 export interface ToolCallRecord {
@@ -172,7 +176,33 @@ export class Agent {
         : { chat_template_kwargs: { enable_thinking: false } }),
       ...(this.reasoningEffortNone ? { reasoning_effort: "none" } : {}),
     });
-    const res = await fetch(`${base}/chat/completions`, { method: "POST", headers, body });
+    // Hosted endpoints can stall (observed: api.openai.com connections that
+    // never complete). A bare fetch then dies at the undici 300 s default
+    // with an opaque "fetch failed", killing the whole run. Give each
+    // request an explicit timeout and retry fetch-level failures — the
+    // retry is safe: the request is a pure function of (messages, temp, seed).
+    const timeoutMs = this.cfg.chatTimeoutMs ?? 600_000;
+    const retries = this.cfg.chatRetries ?? 2;
+    let res: Response | undefined;
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        res = await fetch(`${base}/chat/completions`, {
+          method: "POST",
+          headers,
+          body,
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        break;
+      } catch (e) {
+        lastErr = e;
+        if (attempt < retries) await new Promise((r) => setTimeout(r, 2_000 * (attempt + 1)));
+      }
+    }
+    if (res === undefined) {
+      const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+      throw new Error(`chat request failed after ${retries + 1} attempt(s) at ${timeoutMs} ms each: ${msg}`);
+    }
     if (!res.ok) {
       const errText = (await res.text()).slice(0, 500);
       if (res.status === 400 && !this.chatTemplateKwargsBlocked && errText.includes("chat_template_kwargs")) {
