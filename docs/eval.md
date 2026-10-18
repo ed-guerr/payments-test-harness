@@ -276,8 +276,8 @@ message. Tool-result text is truncated at 2000 chars in the source trace
 Redaction: `EVAL_API_KEY` and any `--key` values are scrubbed from the
 output, plus pattern matches for `Bearer` tokens and URL
 `user:pass@` credentials. Scrubbed samples from the 2026-10-17 qwen3
-10-run three-way: `artifacts/eval/sample-trace-qwen3-recovery.md` (a
-fail → update → green recovery) and `sample-trace-qwen3-budget.md` (a
+10-run three-way: `artifacts/eval/sample-trace-Qwen3.8-27B-recovery.md` (a
+fail → update → green recovery) and `sample-trace-Qwen3.8-27B-budget.md` (a
 step-budget failure). From the 2026-10-17 gemma 10-run three-way:
 `sample-trace-gemma-shallow.md` (green suite, missing ack pin —
 checklist-missing), `sample-trace-gemma-retry-loop.md` (the same invalid

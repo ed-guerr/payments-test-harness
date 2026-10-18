@@ -32,7 +32,7 @@ Committed results — two local models via llama.cpp on a LAN GPU box plus one
 hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0,
 two conditions (kb-on / kb-off).
 Trimmed full-fidelity samples (agent-authored suites intact, tool results
-truncated) in [`sample-qwen3-27b.json`](artifacts/eval/sample-qwen3-27b.json),
+truncated) in [`sample-Qwen3.8-27B.json`](artifacts/eval/sample-Qwen3.8-27B.json),
 [`sample-gpt-6-luna.json`](artifacts/eval/sample-gpt-6-luna.json), and
 [`sample-gemma-12b.json`](artifacts/eval/sample-gemma-12b.json):
 

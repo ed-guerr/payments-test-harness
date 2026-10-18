@@ -6,7 +6,7 @@ here links to a file or a committed report.
 
 The premise of this repo: an LLM agent is the **primary author** of the test
 suites, not a demo. The GIF shows one session; the eval
-(`artifacts/eval/sample-qwen3-27b.md`) is the controlled measurement.
+(`artifacts/eval/sample-Qwen3.8-27B.md`) is the controlled measurement.
 This doc explains the design decisions that make agent authoring *safe,
 replayable, and debuggable* — and what was deliberately not built.
 
