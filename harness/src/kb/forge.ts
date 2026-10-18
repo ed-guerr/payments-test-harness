@@ -24,7 +24,7 @@ import registryJson from "../protocol/registry.json";
 
 const KB_FORGE_VERSION = "0.2";
 /** Attribution line in every generated guide header. */
-const KB_AUTHOR = "Qwen3 (local, via pi coding agent)";
+const KB_AUTHOR = "Qwen3.8-27B (local, via pi coding agent)";
 const REPO_ROOT = (): string => path.join(packageRoot(), "..");
 const KB_DIR = (): string => path.join(REPO_ROOT(), "knowledge");
 const registry = registryJson as unknown as Registry;

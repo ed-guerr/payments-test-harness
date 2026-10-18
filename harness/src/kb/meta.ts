@@ -1,7 +1,7 @@
 /**
  * kb/meta.ts — curated per-directory knowledge that seeds the intern guides.
  *
- * Curated and written by Qwen3 (local, via pi coding agent), 2026-10-13: every claim
+ * Curated and written by Qwen3.8-27B (local, via pi coding agent), 2026-10-13: every claim
  * below was verified against the C/TS sources and against live runs of the
  * backend cluster (notably: one ledger_entries row per transfer, the 9-byte
  * TransferAck/SettleAck field sets, Settle moving the FULL amount, and the

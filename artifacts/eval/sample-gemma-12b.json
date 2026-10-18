@@ -12623,7 +12623,7 @@
             "path": "knowledge/backend/ledger.md"
           },
           "ok": true,
-          "text": "# backend/src/ledger \u2014 Intern Guide\n\n> written by Qwen3 (local, via pi coding agent) \u00b7 generated 2026-10-13T18:10:00.450Z \u00b7 kb-forge 0.2 \u00b7 source sha256:f6e14d6d6f0b\n\n## Purpose\n\nDouble-entry ledger\n\u2026[truncated in sample]",
+          "text": "# backend/src/ledger \u2014 Intern Guide\n\n> written by Qwen3.8-27B (local, via pi coding agent) \u00b7 generated 2026-10-13T18:10:00.450Z \u00b7 kb-forge 0.2 \u00b7 source sha256:f6e14d6d6f0b\n\n## Purpose\n\nDouble-entry ledger\n\u2026[truncated in sample]",
           "durationMs": 1
         },
         {
@@ -14356,7 +14356,7 @@
             "path": "knowledge/backend/auth_gateway.md"
           },
           "ok": true,
-          "text": "# backend/src/auth_gateway \u2014 Intern Guide\n\n> written by Qwen3 (local, via pi coding agent) \u00b7 generated 2026-10-13T18:10:00.450Z \u00b7 kb-forge 0.2 \u00b7 source sha256:08396fa2df73\n\n## Purpose\n\nExternal boun\n\u2026[truncated in sample]",
+          "text": "# backend/src/auth_gateway \u2014 Intern Guide\n\n> written by Qwen3.8-27B (local, via pi coding agent) \u00b7 generated 2026-10-13T18:10:00.450Z \u00b7 kb-forge 0.2 \u00b7 source sha256:08396fa2df73\n\n## Purpose\n\nExternal boun\n\u2026[truncated in sample]",
           "durationMs": 3
         },
         {

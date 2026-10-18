@@ -1,6 +1,6 @@
 # Trace report — `unknown-account` · kb-off · run 1
 
-Source: `2026-10-17T01-33-40-qwen3.json`. Config: model `qwen3` @ `http://<llama.cpp-host>:8080/v1`, temp 0, seed 42, max steps 25, 10 run(s)/task, variants kb-on, kb-content-off, kb-off.
+Source: `2026-10-17T01-33-40-Qwen3.8-27B.json`. Config: model `Qwen3.8-27B` @ `http://<llama.cpp-host>:8080/v1`, temp 0, seed 42, max steps 25, 10 run(s)/task, variants kb-on, kb-content-off, kb-off.
 
 ## Summary
 

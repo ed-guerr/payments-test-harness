@@ -151,7 +151,7 @@ Interpretation rules:
 
 - **The KB's measurable value moves from efficiency to pass-or-fail as the
   model gets weaker — measured on both models, not predicted.** On
-  Qwen3-27B (strong), pass rates end up close (33 vs 32) because a strong
+  Qwen3.8-27B (strong), pass rates end up close (33 vs 32) because a strong
   model plus the self-correcting loop (red run → inspect → `update_suite`
   → re-run) can converge even without the KB; the value shows in
   *efficiency* (avg suite runs 1.0 vs 1.3, tool calls 13.2 vs 14.6) and in
@@ -169,7 +169,7 @@ Interpretation rules:
 - **Dead tools are worse than no tools on weak models.** gemma-4-12b never
   called the empty `kb_search`/`kb_read` (0/110 attempts) yet scored 10/110
   with them present vs 29/110 with them absent (CIs disjoint); first-draft
-  validity also dropped 46/110 → 28/110. On qwen3 the content-off condition
+  validity also dropped 46/110 → 28/110. On Qwen3.8-27B the content-off condition
   matches kb-on exactly (110/110), so this is a model-size effect, not a
   harness artifact.
 - Numbers are from **3 runs per task** (temperature 0 is not determinism on
@@ -275,7 +275,7 @@ message. Tool-result text is truncated at 2000 chars in the source trace
 
 Redaction: `EVAL_API_KEY` and any `--key` values are scrubbed from the
 output, plus pattern matches for `Bearer` tokens and URL
-`user:pass@` credentials. Scrubbed samples from the 2026-10-17 qwen3
+`user:pass@` credentials. Scrubbed samples from the 2026-10-17 Qwen3.8-27B
 10-run three-way: `artifacts/eval/sample-trace-Qwen3.8-27B-recovery.md` (a
 fail → update → green recovery) and `sample-trace-Qwen3.8-27B-budget.md` (a
 step-budget failure). From the 2026-10-17 gemma 10-run three-way:

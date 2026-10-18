@@ -4860,7 +4860,7 @@
             "path": "knowledge/backend/ledger.md"
           },
           "ok": true,
-          "text": "# backend/src/ledger \u2014 Intern Guide\n\n> written by Qwen3 (local, via pi coding agent) \u00b7 generated 2026-10-14T00:29:47.438Z \u00b7 kb-forge 0.2 \u00b7 source sha256:f6e14d6d6f0b\n\n## Purpose\n\nDouble-entry ledger. ",
+          "text": "# backend/src/ledger \u2014 Intern Guide\n\n> written by Qwen3.8-27B (local, via pi coding agent) \u00b7 generated 2026-10-14T00:29:47.438Z \u00b7 kb-forge 0.2 \u00b7 source sha256:f6e14d6d6f0b\n\n## Purpose\n\nDouble-entry ledger. ",
           "durationMs": 2
         },
         {

@@ -1,4 +1,4 @@
-# eval — qwen3 @ http://<your-lan-gpu-box>:8080/v1
+# eval — Qwen3.8-27B @ http://<your-lan-gpu-box>:8080/v1
 
 generated 2026-10-13T17:29:33.521Z · 3 run(s)/task · temperature 0 · max 25 tool steps
 

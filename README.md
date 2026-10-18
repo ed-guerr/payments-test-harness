@@ -19,7 +19,7 @@ to work in, and it is where the knowledge pipeline earns its keep: there is
 no OpenAPI to hand the model, only C.
 
 **~47-second demo** (half speed) — a live `pi` session running a local 27B
-model (llama.cpp `qwen3`) authors a double-settle test through the harness
+model (llama.cpp `Qwen3.8-27B`) authors a double-settle test through the harness
 MCP tools and runs it 10/10 green; *that* suite then runs green in the app;
 then `ledger-chaos-kill` with the `ECONNRESET` failure expanded → Protocol
 Registry → verified balances in the per-suite database:
@@ -50,7 +50,7 @@ efficiency to pass-or-fail as the model gets weaker, and at the frontier it
 mostly disappears — except on the tasks whose ground truth lives only in the
 KB**:
 
-- **Qwen3-27B (strong):** pass rate saturates (33 vs 32); the value shows
+- **Qwen3.8-27B (strong):** pass rate saturates (33 vs 32); the value shows
   as *efficiency* — one-shot suites (1.0 vs 1.3 re-runs), fewer tool calls
   (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
   class of miss the KB exists to prevent. (The 10-run three-way below
@@ -154,8 +154,8 @@ model shows is exactly the capability the 12B model lacks. One
 weak-model-specific effect: **dead tools are worse than no tools.**
 `kb-content-off` (10/110) is far worse than `kb-off` (29/110), CIs disjoint,
 even though Gemma never calls the dead `kb_search`/`kb_read` (0/110 attempts;
-Qwen3 tries them in 70/110) — two unused tool definitions measurably degrade
-first-draft quality (28/110 vs 46/110 valid first suites). On Qwen3 the
+Qwen3.8-27B tries them in 70/110) — two unused tool definitions measurably degrade
+first-draft quality (28/110 vs 46/110 valid first suites). On Qwen3.8-27B the
 content-off condition matches kb-on exactly (110/110), so this is a
 model-size effect, not a harness artifact. Scrubbed traces of all three
 failure shapes: [`sample-trace-gemma-shallow.md`](artifacts/eval/sample-trace-gemma-shallow.md),
@@ -186,13 +186,13 @@ three. At the frontier the KB is a pass-rate wash. The two questions
 the 3-run data left open both close. The dead-tools penalty does not
 carry up the capability ladder. On Gemma, `kb-content-off` (10/110) is
 far below `kb-off` (29/110), and the CIs do not overlap. On Luna it is
-the best condition, 86/110 vs 79/110 for kb-on. With Qwen3 in the
+the best condition, 86/110 vs 79/110 for kb-on. With Qwen3.8-27B in the
 middle, where content-off equals kb-on at 110/110, the dead-tools
 effect is a small-model thing, not a property of the tool surface. And
 both KB-sensitive tasks stop separating the models.
 `gateway-forward-completes` is 10/10 in every condition, and the 1/3
 kb-off from the 3-run data was just n=3 noise. `unknown-account`, the
-task that cost Qwen3-27B its only 10-run miss, is also 10/10 in every
+task that cost Qwen3.8-27B its only 10-run miss, is also 10/10 in every
 condition. The frontier model infers the protocol from introspection
 alone, status codes included. The residual KB effect lives in one
 task. `settle-moves-money` goes 9/6/8 across the conditions. The
@@ -655,7 +655,7 @@ From building the eval and the A/B — each one changed a design decision:
    context (LM Studio) but 5 of 9 (3 runs/task, same three tasks) at 32k
    (llama.cpp). The context window is not the only variable you are holding
    constant.
-3. **Disable thinking tokens by default, measure, then decide.** Qwen3's
+3. **Disable thinking tokens by default, measure, then decide.** Qwen3.8-27B's
    reasoning mode multiplies completion tokens ~3× for this task and buys
    nothing on the score; the eval sends `enable_thinking: false` unless
    `EVAL_THINKING=1` (`harness/src/eval/agent.ts`).

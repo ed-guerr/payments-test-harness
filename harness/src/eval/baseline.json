@@ -2,7 +2,7 @@
   "note": "Per-model regression baselines for `npm run eval` (roadmap R2, Layer B). The eval CLI reads the min pass for the running model and fails the run if a variant regresses below it. After an intentional improvement (better prompt, richer KB, more tasks), re-run the full eval and update these numbers with the new source note.",
   "models": {
     "qwen3": {
-      "source": "three-way full eval 2026-10-17 — Qwen3.8-27B Q4_K_M via llama.cpp (LAN, <llama.cpp-host>:8080), temp 0, seed 42, 10 runs/task. Source report: artifacts/eval/2026-10-17T01-33-40-qwen3.json (330 attempts, full traces). Re-baselined: the 10-run config replaced the 2026-10-13 3-run baseline (33/33, 32/33); the entire delta vs kb-off sits in one task (unknown-account, kb-off 1/10, step-budget). kb-content-off (110/110) deliberately NOT baselined — single measurement, per the re-baseline policy.",
+      "source": "three-way full eval 2026-10-17 — Qwen3.8-27B Q4_K_M via llama.cpp (LAN, <llama.cpp-host>:8080), temp 0, seed 42, 10 runs/task. Source report: artifacts/eval/2026-10-17T01-33-40-Qwen3.8-27B.json (330 attempts, full traces). Re-baselined: the 10-run config replaced the 2026-10-13 3-run baseline (33/33, 32/33); the entire delta vs kb-off sits in one task (unknown-account, kb-off 1/10, step-budget). kb-content-off (110/110) deliberately NOT baselined — single measurement, per the re-baseline policy.",
       "kb": { "pass": 110, "total": 110 },
       "no_kb": { "pass": 101, "total": 110 }
     },

@@ -167,7 +167,7 @@ export class Agent {
       tools: this.tools,
       temperature: this.cfg.temperature,
       ...(this.cfg.seed === undefined ? {} : { seed: this.cfg.seed }),
-      // Qwen3 chat template: disable reasoning tokens. Set EVAL_THINKING=1 to
+      // Qwen3.8-27B chat template: disable reasoning tokens. Set EVAL_THINKING=1 to
       // turn reasoning on. Endpoints that reject the parameter (OpenAI)
       // trigger the 400 retry below, which drops it for this and all
       // subsequent calls.

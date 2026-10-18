@@ -1,6 +1,6 @@
 # harness/src/renderer — Intern Guide
 
-> written by Qwen3 (local, via pi coding agent) · generated 2026-10-17T00:22:13.830Z · kb-forge 0.2 · source sha256:142d531784ab
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-10-17T00:22:13.830Z · kb-forge 0.2 · source sha256:142d531784ab
 
 ## Purpose
 
