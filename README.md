@@ -70,7 +70,9 @@ KB**:
   12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
   p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs
   exhaust the 25-step tool budget; the KB keeps a weak model inside it
-  (3/3 vs 2/3 on KB-sensitive `gateway-forward-completes`).
+  (3/3 vs 2/3 on KB-sensitive `gateway-forward-completes`). The 10-run
+  three-way below shows the ~36% ceiling is stable across runs, and that the
+  misses are recovery failures, not knowledge gaps.
 - The tasks **stratify the models**: `settle-moves-money` (the prompt never
   says *where* settlement money goes) is 3/3 for Qwen in both variants and
   0/3 for Gemma in both. No single task discriminates; the set does. Two
@@ -121,6 +123,41 @@ cover one model and one task set; the empty-result condition is a content
 ablation, not a matched-response control. The 9/10 failure seems more like
 one deterministic first-guess behavior with a 10% recovery rate, not nine
 independent failures.
+
+### The same three ways, on the weaker model (10 runs per task)
+
+Gemma-4-12B ran the identical three-way on 2026-10-17 (the Oct 13 three-run
+run was served from a directory misspelled `Gemma4-12B-WAT` — same model,
+directory renamed; the pass rate barely moved):
+
+| condition | pass | 95% CI | tool calls (mean) | suite reruns (mean) |
+|---|---|---|---|---|
+| kb-on | 40/110 | 28–46% | 14.4 | 0.9 |
+| kb-content-off | 10/110 | 5–16% | 20.4 | 1.8 |
+| kb-off | 29/110 | 19–35% | 17.8 | 0.8 |
+
+36.4% with the KB — the same ceiling as the three-run run (12/33) — with the
+same four tasks passing reliably (`chaos-kill-ledger`, `unknown-account`,
+`interleaved-payments`, and the KB-sensitive `gateway-forward-completes`);
+the other seven tasks are 0/10 in every condition. Two mechanisms dominate,
+both *recovery* failures rather than knowledge gaps: 43% of all attempts
+(141/330) end in five to twenty **identical failed `create_suite` calls** —
+the validator says e.g. `CreatePayment: missing field txn_id`, and the model
+resends the same payload until the 25-step budget dies; and red suites are
+never repaired (`reversal-chain` kb-on: ten checklist-full suites that ran
+red on the final balances, then the same `db_query` repeated until the budget
+died, `update_suite` never called). The fail → fix → re-run loop the 27B
+model shows is exactly the capability the 12B model lacks. One
+weak-model-specific effect: **dead tools are worse than no tools.**
+`kb-content-off` (10/110) is far worse than `kb-off` (29/110), CIs disjoint,
+even though Gemma never calls the dead `kb_search`/`kb_read` (0/110 attempts;
+Qwen3 tries them in 70/110) — two unused tool definitions measurably degrade
+first-draft quality (28/110 vs 46/110 valid first suites). On Qwen3 the
+content-off condition matches kb-on exactly (110/110), so this is a
+model-size effect, not a harness artifact. Scrubbed traces of all three
+failure shapes: [`sample-trace-gemma-shallow.md`](artifacts/eval/sample-trace-gemma-shallow.md),
+[`sample-trace-gemma-retry-loop.md`](artifacts/eval/sample-trace-gemma-retry-loop.md),
+[`sample-trace-gemma-no-repair.md`](artifacts/eval/sample-trace-gemma-no-repair.md).
 
 ## What's in the repo
 

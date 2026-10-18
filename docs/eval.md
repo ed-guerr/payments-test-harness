@@ -161,7 +161,17 @@ Interpretation rules:
   budget, and the KB is what keeps a weak model inside it.
 - Expect KB on ≤ KB off on avg suite runs / tool calls on any model.
 - If a run shows KB on *worse* than KB off on any column, the experiment is
-  broken or the KB row is stale — fix the artifact, never the number.
+  broken or the KB row is stale — fix the artifact, never the number. One
+  documented inversion: gemma-4-12b (10-run three-way, 2026-10-17) has *more*
+  avg suite runs with the KB (0.9 vs 0.8) because without it a third of the
+  runs die in identical-retry `create_suite` loops before ever running a
+  suite — check the traces before declaring the experiment broken.
+- **Dead tools are worse than no tools on weak models.** gemma-4-12b never
+  called the empty `kb_search`/`kb_read` (0/110 attempts) yet scored 10/110
+  with them present vs 29/110 with them absent (CIs disjoint); first-draft
+  validity also dropped 46/110 → 28/110. On qwen3 the content-off condition
+  matches kb-on exactly (110/110), so this is a model-size effect, not a
+  harness artifact.
 - Numbers are from **3 runs per task** (temperature 0 is not determinism on
   a quantized local model); report distributions, never a single run.
   The report's `distributions` rows (min/p50/p95 across all attempts) and
@@ -268,4 +278,9 @@ output, plus pattern matches for `Bearer` tokens and URL
 `user:pass@` credentials. Scrubbed samples from the 2026-10-17 qwen3
 10-run three-way: `artifacts/eval/sample-trace-qwen3-recovery.md` (a
 fail → update → green recovery) and `sample-trace-qwen3-budget.md` (a
-step-budget failure).
+step-budget failure). From the 2026-10-17 gemma 10-run three-way:
+`sample-trace-gemma-shallow.md` (green suite, missing ack pin —
+checklist-missing), `sample-trace-gemma-retry-loop.md` (the same invalid
+suite resubmitted until the step budget dies), and
+`sample-trace-gemma-no-repair.md` (a checklist-full red suite that is never
+updated).

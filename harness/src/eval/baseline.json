@@ -7,9 +7,9 @@
       "no_kb": { "pass": 101, "total": 110 }
     },
     "gemma-4-12b-it-qat-q4_0.gguf": {
-      "source": "full eval run 2026-10-13 — Gemma-4-12B QAT Q4_0 via llama.cpp (LAN, port 8082), temp 0, 3 runs/task. Model id is the GGUF path the single-model llama.cpp server reports",
-      "kb": { "pass": 12, "total": 33 },
-      "no_kb": { "pass": 8, "total": 33 }
+      "source": "three-way full eval 2026-10-17 — Gemma-4-12B QAT Q4_0 via llama.cpp (LAN, <llama.cpp-host>:8082), temp 0, seed 42, 10 runs/task. Model id is the GGUF path the single-model llama.cpp server reports. Re-baselined: the 10-run config replaced the 2026-10-13 3-run baseline (12/33, 8/33), which was served from a directory misspelled Gemma4-12B-WAT (same model, directory renamed). kb-content-off (10/110) deliberately NOT baselined — single measurement, per the re-baseline policy. Source report: artifacts/eval/2026-10-17T09-10-49--mnt-ai-models-Gemma4-12.json (330 attempts, full traces)",
+      "kb": { "pass": 40, "total": 110 },
+      "no_kb": { "pass": 29, "total": 110 }
     },
     "gpt-6-luna": {
       "source": "full eval run 2026-10-14 — gpt-6-luna via OpenAI /v1/chat/completions, temp 0, 3 runs/task. The endpoint forces reasoning_effort \"none\" for function tools, so this model is baselined with reasoning off — a Responses-API run (reasoning on) is a different configuration and should be re-baselined deliberately",
