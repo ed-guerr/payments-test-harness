@@ -291,6 +291,17 @@ Everything in this repo (the introspected registry, the forged guides, the
 KB on/off measurement) is the answer to that environment, with numbers
 attached.
 
+## Prerequisites
+
+- **Node ≥ 24 (LTS)** — the harness uses Node's built-in `node:sqlite`
+  (no native module); CI runs the latest 24.x. Node 22 works at ≥ 22.13
+  (with `--experimental-sqlite` below that).
+- **C11 compiler** — Apple clang (Xcode command-line tools) on macOS; gcc
+  + `libsqlite3-dev` on Linux.
+- **Python 3** — the backend smoke test.
+- **clang-format 23.1.3** — the exact version CI pins (fmt-check is
+  version-sensitive): `python3 -m pip install clang-format==23.1.3`.
+
 ## Quickstart (macOS, Apple clang — tested)
 
 ```bash
@@ -313,11 +324,11 @@ npm start                       # Electron: suites / registry / database
 HARNESS_SELF_TEST=1 npm start   # headless e2e self-test (drives the real UI)
 ```
 
-> **npm note (this machine's policy):** install scripts are blocked by
-> default; approve them once with
-> `npm install-scripts approve better-sqlite3 esbuild fsevents electron`.
-> (The committed harness uses Node's built-in `node:sqlite`, so only the
-> dev/build tooling needs approving.)
+> **npm note (npm ≥ 11):** install scripts are blocked by default, so
+> `npm install` mentions esbuild/fsevents — dev tooling, not needed for
+> `npm run verify` (fresh-clone verified). Approve electron's once for
+> the GUI: `npm install-scripts approve electron`. The harness itself uses
+> Node's built-in `node:sqlite` — no native module.
 
 ## The agent's world: an MCP surface designed for it
 
