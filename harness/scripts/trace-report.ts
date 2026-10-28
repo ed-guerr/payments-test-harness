@@ -11,10 +11,23 @@
  * Secrets (EVAL_API_KEY + --key values, Bearer tokens, URL credentials)
  * are redacted from the output. No model or backend is required.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { MIN_SECRET_LEN, renderTraceReport } from "../src/eval/tracereport";
 import type { EvalReport } from "../src/eval/types";
+
+/** Nearest ancestor containing a .git directory (undefined outside a repo). */
+function findRepoRoot(start: string): string | undefined {
+  let dir = start;
+  for (;;) {
+    if (existsSync(join(dir, ".git"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
+  }
+}
+
+const repoRoot = findRepoRoot(process.cwd());
 
 function fail(msg: string): never {
   console.error(`trace-report: ${msg}`);
@@ -55,7 +68,7 @@ if (flags.all) {
   if (!dir) fail("--all requires --out-dir");
   let n = 0;
   for (const run of report.runs) {
-    const md = renderTraceReport(report.config, run, { source, redact: secrets });
+    const md = renderTraceReport(report.config, run, { source, redact: secrets, repoRoot });
     const outDir = join(dir, run.variant);
     mkdirSync(outDir, { recursive: true });
     const file = join(outDir, `${run.taskId}-run${String(run.run).padStart(2, "0")}.md`);
@@ -79,7 +92,7 @@ if (!run) {
   fail(`no run ${ref}. available: ${available.length ? available.join(", ") : `no runs for ${taskId}/${variant}`}`);
 }
 
-const md = renderTraceReport(report.config, run, { source, redact: secrets });
+const md = renderTraceReport(report.config, run, { source, redact: secrets, repoRoot });
 if (flags["--out"]?.[0]) {
   writeFileSync(flags["--out"][0]!, md);
   console.log(`wrote ${flags["--out"][0]}`);

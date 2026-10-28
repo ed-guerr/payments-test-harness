@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   diffSuites,
+  modelLabel,
   parseSuiteRunText,
   redact,
+  redactPersonal,
   renderTraceReport,
   suiteFromArgs,
 } from "./tracereport";
@@ -186,6 +188,55 @@ test("redact: pattern matches work standalone and short secrets are ignored", ()
   assert.equal(redact("Bearer abc.def_123", []), "Bearer [REDACTED]");
   assert.equal(redact("http://u:p@h/x", []), "http://[REDACTED]@h/x");
   assert.equal(redact("sk-12", ["sk-12"]), "sk-12"); // < MIN_SECRET_LEN not value-scrubbed
+});
+
+test("redact: RFC1918 endpoints are redacted, public endpoints untouched", () => {
+  // Synthetic private-range addresses only — never a real LAN address, so
+  // this test file can never carry a live endpoint into history.
+  assert.equal(redact("http://10.0.0.5:8080/v1", []), "http://<lan-host>:8080/v1");
+  assert.equal(redact("ws://172.16.0.1:9000", []), "ws://<lan-host>:9000");
+  assert.equal(redact("the box at 172.31.255.254 died", []), "the box at <lan-ip> died");
+  // 172.15/172.32 are outside 172.16.0.0/12; 8.8.8.8 is public.
+  assert.equal(redact("172.15.0.1 and 172.32.0.1 and 8.8.8.8 stay", []), "172.15.0.1 and 172.32.0.1 and 8.8.8.8 stay");
+  assert.equal(redact("https://api.example.com/v1", []), "https://api.example.com/v1");
+  assert.equal(redact("http://localhost:8080/v1", []), "http://localhost:8080/v1");
+});
+
+test("personal values are redacted: LAN URL, home dir, repo root, GGUF model path", () => {
+  const personalConfig: EvalConfig = { ...config, apiBase: "http://10.0.0.5:8080/v1" };
+  const gguf = "/srv/models/demo-12b-it-q4_0/demo-12b-it-qat-q4_0.gguf";
+  const home = "/tmp/agent-home";
+  const repo = `${home}/projects/demo-repo`;
+  const r = run({
+    model: gguf,
+    trace: [rec(1, "get_suite", { file: `${repo}/harness/suites/x.json` }, true, "ok")],
+  });
+  const md = renderTraceReport(personalConfig, r, { homeDir: home, repoRoot: repo });
+  assert.ok(!md.includes("10.0.0.5"), "LAN IP leaked");
+  assert.ok(!md.includes("/tmp/agent-home"), "home dir leaked");
+  assert.ok(!md.includes("/srv/models"), "model path leaked");
+  assert.match(md, /http:\/\/<lan-host>:8080\/v1/);
+  assert.match(md, /<repo>\/harness\/suites\/x\.json/);
+  assert.match(md, /demo-12b-it-qat-q4_0\.gguf/);
+  assert.match(md, /home\/repo paths are always redacted/);
+});
+
+test("redactPersonal: substitutes only whole path units, longest value first", () => {
+  const home = "/tmp/agent";
+  const repo = `${home}/projects/demo-repo`;
+  assert.equal(
+    redactPersonal("a /tmp/agent/x and /tmp/agent2 and /tmp/agent", { homeDir: home }),
+    "a <home>/x and /tmp/agent2 and <home>",
+  );
+  assert.equal(
+    redactPersonal(`path \`${repo}/src/a.c\` and \`${repo}\``, { homeDir: home, repoRoot: repo }),
+    "path `<repo>/src/a.c` and `<repo>`",
+  );
+});
+
+test("modelLabel: paths reduce to basename, ids pass through", () => {
+  assert.equal(modelLabel("/srv/models/demo-12b-it-q4_0/demo-12b-it-qat-q4_0.gguf"), "demo-12b-it-qat-q4_0.gguf");
+  assert.equal(modelLabel("gpt-6-luna"), "gpt-6-luna");
 });
 
 test("checklist: passing and failing items both show their detail", () => {

@@ -7,6 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { modelLabel, redact } from "./tracereport";
 import type { EvalConfig, EvalReport, FailureReason, TaskRunRecord, VariantSummary } from "./types";
 
 function escapeMarkdownCell(value: string): string {
@@ -133,7 +134,7 @@ export function summarize(runs: TaskRunRecord[]): VariantSummary[] {
 
 export function toMarkdown(report: EvalReport): string {
   const out: string[] = [];
-  out.push(`# eval — ${report.config.model} @ ${report.config.apiBase}`);
+  out.push(`# eval — ${modelLabel(report.config.model)} @ ${report.config.apiBase}`);
   out.push("");
   out.push(`generated ${report.generatedAt} · ${report.config.runsPerTask} run(s)/task · ` +
     `temperature ${report.config.temperature} · seed ${report.config.seed ?? "unsupported/unset"} · max ${report.config.maxToolSteps} tool steps`);
@@ -224,13 +225,17 @@ export function toMarkdown(report: EvalReport): string {
   }
   out.push("");
   out.push("pass = agent created the suite AND it runs green (independent re-run) AND the full ground-truth checklist is satisfied.");
-  return out.join("\n") + "\n";
+  // Always-on redaction (LAN endpoints, credentials): the markdown is the
+  // artifact that gets committed as samples, so it must be leak-free.
+  return redact(out.join("\n"), []) + "\n";
 }
 
 export function writeReport(report: EvalReport, outDir: string): { json: string; md: string } {
   fs.mkdirSync(outDir, { recursive: true });
   const stamp = new Date(report.generatedAt).toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  const base = `${stamp}-${report.config.model.replace(/[^a-z0-9]/gi, "-").slice(0, 24)}`;
+  // modelLabel: a GGUF-path model id (single-model llama.cpp server) would
+  // otherwise slugify to --mnt-ai-models-… from the leading slashes.
+  const base = `${stamp}-${modelLabel(report.config.model).replace(/[^a-z0-9]/gi, "-").slice(0, 24)}`;
   const json = path.join(outDir, `${base}.json`);
   const md = path.join(outDir, `${base}.md`);
   fs.writeFileSync(json, JSON.stringify(report, null, 2) + "\n");

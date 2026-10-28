@@ -13,9 +13,13 @@
  *   so red runs are detected by parsing the result text. Result text is
  *   truncated at TRUNCATED_AT chars at record time (see agent.ts).
  * - Redaction is applied to the finished document: configured secret
- *   values are replaced with [REDACTED], plus pattern matches for
- *   `Bearer <token>` and URL user:pass credentials.
+ *   values are replaced with [REDACTED], plus always-on pattern matches for
+ *   `Bearer <token>`, URL user:pass credentials, and RFC1918 (LAN)
+ *   endpoints, plus always-on value redaction of the home dir, the repo
+ *   root, and model ids that are filesystem paths (the single-model
+ *   llama.cpp server reports the GGUF path).
  */
+import { homedir } from "node:os";
 import type { Check, EvalConfig, TaskRunRecord, ToolCallRecord } from "./types";
 
 /** Must match MAX_RECORD_TEXT in agent.ts (tool-result text truncation). */
@@ -28,6 +32,10 @@ export interface TraceReportOptions {
   source?: string;
   /** Max chars of a single inline preview in the timeline table. */
   previewLen?: number;
+  /** Home dir to redact from the document (default: os.homedir()). */
+  homeDir?: string;
+  /** Repo root to redact from the document (default: none). */
+  repoRoot?: string;
 }
 
 // ---------------------------------------------------------------- redaction
@@ -35,10 +43,22 @@ export interface TraceReportOptions {
 const BEARER_RE = /Bearer\s+[A-Za-z0-9._~+/=-]+/g;
 const URL_CREDS_RE = /(:\/\/)[^@/\s:]+:[^@/\s]+(@)/g;
 
+/** Full RFC1918 address (the 10/8, 192.168/16, and 172.16/12 blocks). */
+const RFC1918_IP =
+  "10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}" +
+  "|192\\.168\\.\\d{1,3}\\.\\d{1,3}" +
+  "|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}";
+const URL_LAN_HOST_RE = new RegExp(`((?:https?|wss?)://)(?:${RFC1918_IP})(:\\d+)?`, "g");
+const LAN_IP_RE = new RegExp(`\\b(?:${RFC1918_IP})\\b`, "g");
+
 /** Exact-value scrubbing only for secrets this long (shorter values risk false hits). */
 export const MIN_SECRET_LEN = 6;
 
-/** Replace configured secrets (longest first) and pattern-match credentials. */
+/**
+ * Replace configured secrets (longest first) and pattern-match credentials
+ * and RFC1918 (LAN) endpoints — the LAN patterns always apply, not only
+ * for configured secrets.
+ */
 export function redact(text: string, secrets: string[]): string {
   let out = text;
   for (const s of [...secrets].filter((s) => s.length >= MIN_SECRET_LEN).sort((a, b) => b.length - a.length)) {
@@ -46,6 +66,45 @@ export function redact(text: string, secrets: string[]): string {
   }
   out = out.replace(BEARER_RE, "Bearer [REDACTED]");
   out = out.replace(URL_CREDS_RE, "$1[REDACTED]$2");
+  out = out.replace(URL_LAN_HOST_RE, "$1<lan-host>$2");
+  out = out.replace(LAN_IP_RE, "<lan-ip>");
+  return out;
+}
+
+/**
+ * Display label for a model id: a filesystem path (the single-model
+ * llama.cpp server reports the GGUF path) is reduced to its basename so
+ * rendered reports never carry local disk layout.
+ */
+export function modelLabel(model: string): string {
+  return model.includes("/") ? (model.split("/").pop() as string) : model;
+}
+
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Value-level personal redaction: the home dir, the repo root, and model
+ * ids that are filesystem paths. Applied longest first (so the repo root
+ * wins over the home dir) and only where the value is a path unit — the
+ * next character must not extend a path name — so a home dir never matches
+ * inside a longer sibling path (a different username sharing a prefix),
+ * but does match at end of line or before punctuation like a closing
+ * backtick.
+ */
+export function redactPersonal(
+  text: string,
+  values: { homeDir?: string; repoRoot?: string; modelId?: string },
+): string {
+  const subs: Array<[string, string]> = [];
+  if (values.repoRoot) subs.push([values.repoRoot, "<repo>"]);
+  if (values.homeDir) subs.push([values.homeDir, "<home>"]);
+  const m = values.modelId;
+  if (m && m.includes("/")) subs.push([m, modelLabel(m)]);
+  subs.sort((a, b) => b[0].length - a[0].length);
+  let out = text;
+  for (const [value, repl] of subs) {
+    out = out.replace(new RegExp(escapeRe(value) + "(?![A-Za-z0-9._-])", "g"), repl);
+  }
   return out;
 }
 
@@ -225,6 +284,17 @@ export function renderTraceReport(
 ): string {
   const previewLen = opts.previewLen ?? 70;
   const out: string[] = [];
+  const personalValues = {
+    homeDir: opts.homeDir ?? homedir(),
+    repoRoot: opts.repoRoot,
+    modelId: run.model,
+  };
+  // Scrub recorded tool text before rendering, not just in the finished
+  // document: the renderer truncates strings to 70-char previews (and the
+  // final message to 1500 chars), and a path cut mid-string no longer
+  // matches its full value at the document level. The final pass below
+  // stays as the second net for everything else.
+  const scrub = (s: string): string => redact(redactPersonal(s, personalValues), opts.redact ?? []);
 
   // ---- header
   out.push(`# Trace report — \`${run.taskId}\` · ${run.variant} · run ${run.run}`, "");
@@ -271,7 +341,7 @@ export function renderTraceReport(
   } else {
     out.push("| # | phase | tool | args | result | ms |", "|---|---|---|---|---|---|");
     for (const t of run.trace) {
-      out.push(timelineRow(t, previewLen));
+      out.push(timelineRow(t, previewLen, scrub));
     }
     out.push("");
   }
@@ -314,7 +384,7 @@ export function renderTraceReport(
   const redRuns: { step: number; result: SuiteRunResult }[] = [];
   for (const t of run.trace) {
     if (t.name !== "run_suite") continue;
-    const parsed = parseSuiteRunText(t.text);
+    const parsed = parseSuiteRunText(scrub(t.text));
     if (parsed && !parsed.ok) redRuns.push({ step: t.step, result: parsed });
   }
   if (redRuns.length > 0) {
@@ -347,8 +417,8 @@ export function renderTraceReport(
   // ---- final message
   out.push("## Agent final message", "");
   if (run.finalText) {
-    const ft = run.finalText.length > 1500 ? run.finalText.slice(0, 1500) + "\n…(truncated)" : run.finalText;
-    out.push(codeBlock(ft), "");
+    const ft = scrub(run.finalText);
+    out.push(codeBlock(ft.length > 1500 ? ft.slice(0, 1500) + "\n…(truncated)" : ft), "");
   } else {
     out.push("_empty_", "");
   }
@@ -356,14 +426,17 @@ export function renderTraceReport(
   // ---- redaction note
   const nSecrets = (opts.redact ?? []).filter((s) => s.length >= MIN_SECRET_LEN).length;
   out.push("---", "",
-    `Redaction: ${nSecrets} secret value(s) configured for scrubbing; \`Bearer\` tokens and URL credentials are pattern-matched. ` +
+    `Redaction: ${nSecrets} secret value(s) configured for scrubbing; \`Bearer\` tokens, URL credentials, ` +
+    `RFC1918 endpoints, and personal home/repo paths are always redacted. ` +
     `Tool-result text in the source trace is truncated at ${TRUNCATED_AT} chars (full text was sent to the model).`);
 
-  return redact(out.join("\n"), opts.redact ?? []);
+  const doc = out.join("\n");
+  return redact(redactPersonal(doc, personalValues), opts.redact ?? []);
 }
 
-function timelineRow(t: ToolCallRecord, previewLen: number): string {
-  const argsStr = JSON.stringify(t.args ?? null) ?? "null";
+function timelineRow(t: ToolCallRecord, previewLen: number, scrub: (s: string) => string): string {
+  const text = scrub(t.text);
+  const argsStr = scrub(JSON.stringify(t.args ?? null) ?? "null");
   let args: string;
   if (t.name === "create_suite" || t.name === "update_suite") {
     const s = suiteFromArgs(t.args);
@@ -374,16 +447,16 @@ function timelineRow(t: ToolCallRecord, previewLen: number): string {
 
   let result: string;
   if (t.name === "run_suite") {
-    const parsed = parseSuiteRunText(t.text);
+    const parsed = parseSuiteRunText(text);
     result = parsed
       ? parsed.ok
         ? `${parsed.passed}/${parsed.passed + parsed.failed} green`
         : `**${parsed.passed}/${parsed.passed + parsed.failed} — RED**`
-      : escInline(preview(t.text, previewLen));
+      : escInline(preview(text, previewLen));
   } else if (t.ok) {
-    result = escInline(preview(t.text, previewLen));
+    result = escInline(preview(text, previewLen));
   } else {
-    result = `**ERR**: ${escInline(preview(t.text, previewLen))}`;
+    result = `**ERR**: ${escInline(preview(text, previewLen))}`;
   }
 
   const trunc = t.text.length >= TRUNCATED_AT ? " …(truncated)" : "";
