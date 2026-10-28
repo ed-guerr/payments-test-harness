@@ -6,8 +6,8 @@
 
 **An LLM agent that autonomously authors, validates, and runs integration
 tests for a complex C payments backend** — grounded in a generated
-knowledge base, with the effect *measured* (KB on vs off, two models, 66
-runs) rather than asserted. The agent's entire world is a 15-tool MCP
+knowledge base, with the effect *measured* (three models, 1,188 runs across
+two- and three-condition KB ablations) rather than asserted. The agent's entire world is a 15-tool MCP
 server; every artifact it produces is validated before it exists, replayable
 on any machine, and contained so the worst case is structurally harmless.
 
@@ -30,7 +30,9 @@ Registry → verified balances in the per-suite database:
 
 Committed results — two local models via llama.cpp on a LAN GPU box plus one
 hosted frontier model (gpt-6-luna via OpenAI), 3 runs per task, temperature 0,
-two conditions (kb-on / kb-off).
+two conditions (kb-on / kb-off). This is the original 3-runs-per-task,
+two-condition eval (66 runs per model); the 10-run three-way tables below
+supersede it for pass-rate claims.
 Trimmed full-fidelity samples (agent-authored suites intact, tool results
 truncated) in [`sample-Qwen3.8-27B.json`](artifacts/eval/sample-Qwen3.8-27B.json),
 [`sample-gpt-6-luna.json`](artifacts/eval/sample-gpt-6-luna.json), and
@@ -55,20 +57,20 @@ KB**:
   (13.2 vs 14.6). The single failure (KB-off `unknown-account`, 2/3) is the
   class of miss the KB exists to prevent. (The 10-run three-way below
   sharpens both points.)
-- **gpt-6-luna (hosted frontier):** pass rate is a wash (20 vs 22, within
-  run noise) — a strong model infers the protocol from introspection alone.
-  But on the two KB-sensitive tasks the KB still pays (3/3 vs 1/3 on
-  `gateway-forward-completes`, 3/3 vs 2/3 on `settle-moves-money`), and the
-  failure mode changes shape: instead of exhausting the 25-step tool budget
-  (Gemma's miss), it writes a *functionally correct* suite that drops one
-  ground-truth assertion — `happy-path` kb-on is 0/3 on a single missing
-  `Settle` ack check, all three runs. Two caveats, stated plainly: the
+- **gpt-6-luna (hosted frontier):** pass rate is a wash at n=10 (79 vs 90,
+  overlapping CIs) — a strong model infers the protocol from introspection
+  alone, status codes included. The 3-run table's gaps (20 vs 22 overall;
+  3/3 vs 1/3 on `gateway-forward-completes`) were n=3 noise: 10/10 in every
+  10-run condition; `settle-moves-money` (3/3 vs 2/3) narrows to 9/6/8. Its
+  failure mode is not the budget exhaustion that is Gemma's miss but a
+  *functionally correct* suite that drops one ground-truth assertion — the
+  3-run `happy-path` kb-on 0/3 on a missing `Settle` ack check, and at n=10
+  `chaos-kill-ledger` 6/10 in both kb-on and kb-off on the missing
+  final-balance assertions. Two caveats, stated plainly: the
   `/chat/completions` endpoint forces `reasoning_effort: "none"` for function
-  tools, so this row is the model *with reasoning off*, and the full 66-run
-  eval cost ~$0.35 at $0.10/$0.50 per M tokens. The 10-run three-way below
-  settles both caveats. The wash holds, 79 vs 90 with overlapping CIs.
-  Neither KB-sensitive task separates anymore, both are 10/10 on kb-off.
-  The dead-tools penalty stays on the 12B.
+  tools, so every row here is the model *with reasoning off*, and the 66-run
+  eval cost ~$0.35 at $0.10/$0.50 per M tokens. The dead-tools penalty stays
+  on the 12B.
 - **Gemma-4-12B (weaker):** the value shows in the *pass rate itself* —
   12 vs 8 (+50% relative), fewer tool calls (14.4 vs 18.1), 3.6× faster
   p50 (14 s vs 50 s). Mechanism visible in the data: 31 of its 66 runs
@@ -140,9 +142,11 @@ directory renamed; the pass rate barely moved):
 | kb-off | 29/110 | 19–35% | 17.8 | 0.8 |
 
 36.4% with the KB — the same ceiling as the three-run run (12/33) — with the
-same four tasks passing reliably (`chaos-kill-ledger`, `unknown-account`,
+same four tasks carrying kb-on (`chaos-kill-ledger`, `unknown-account`,
 `interleaved-payments`, and the KB-sensitive `gateway-forward-completes`);
-the other seven tasks are 0/10 in every condition. Two mechanisms dominate,
+on kb-off, `reversal-chain` also passes 10/10 (it was 3/3 there in the
+3-run data) and `gateway-forward-completes` holds 9/10; the other six tasks
+are 0/10 in every condition. Two mechanisms dominate,
 both *recovery* failures rather than knowledge gaps: 43% of all attempts
 (141/330) end in five to twenty **identical failed `create_suite` calls** —
 the validator says e.g. `CreatePayment: missing field txn_id`, and the model
@@ -155,7 +159,8 @@ weak-model-specific effect: **dead tools are worse than no tools.**
 `kb-content-off` (10/110) is far worse than `kb-off` (29/110), CIs disjoint,
 even though Gemma never calls the dead `kb_search`/`kb_read` (0/110 attempts;
 Qwen3.8-27B tries them in 70/110) — two unused tool definitions measurably degrade
-first-draft quality (28/110 vs 46/110 valid first suites). On Qwen3.8-27B the
+first-draft quality (28/110 vs 110/110 valid first suites — the first
+`create_suite` passes the harness validator). On Qwen3.8-27B the
 content-off condition matches kb-on exactly (110/110), so this is a
 model-size effect, not a harness artifact. Scrubbed traces of all three
 failure shapes: [`sample-trace-gemma-shallow.md`](artifacts/eval/sample-trace-gemma-shallow.md),
@@ -188,12 +193,9 @@ carry up the capability ladder. On Gemma, `kb-content-off` (10/110) is
 far below `kb-off` (29/110), and the CIs do not overlap. On Luna it is
 the best condition, 86/110 vs 79/110 for kb-on. With Qwen3.8-27B in the
 middle, where content-off equals kb-on at 110/110, the dead-tools
-effect is a small-model thing, not a property of the tool surface. And
-both KB-sensitive tasks stop separating the models.
-`gateway-forward-completes` is 10/10 in every condition, and the 1/3
-kb-off from the 3-run data was just n=3 noise. `unknown-account`, the
-task that cost Qwen3.8-27B its only 10-run miss, is also 10/10 in every
-condition. The frontier model infers the protocol from introspection
+effect is a small-model thing, not a property of the tool surface. And the 3-run gaps close: `gateway-forward-completes` is 10/10 in every
+condition (the 1/3 kb-off was just n=3 noise), as is `unknown-account`, the
+task that cost Qwen3.8-27B its only 10-run miss. The frontier model infers the protocol from introspection
 alone, status codes included. The residual KB effect lives in one
 task. `settle-moves-money` goes 9/6/8 across the conditions. The
 frontier has its own failure shape, to go with the 12B's retry loops.
@@ -512,7 +514,7 @@ push/PR to `main`, plus the opt-in `eval` job in `eval.yml`:
 | `eval` (opt-in, `eval.yml`) | real-model eval against a live endpoint: full 11-task run with the committed per-model baseline gate. Off unless the `EVAL_RUN_EVAL` repository variable is `true` and `EVAL_API_*` secrets exist — on a schedule, on demand, and on pushes touching the agent surface. |
 
 The harness is unit-tested with the built-in `node:test` runner (`npm run
-test:unit`, 23 tests, no test framework added — the repo's npm policy blocks
+test:unit`, 62 tests, no test framework added — the repo's npm policy blocks
 install scripts by default).
 
 ## Docker

@@ -169,7 +169,8 @@ Interpretation rules:
 - **Dead tools are worse than no tools on weak models.** gemma-4-12b never
   called the empty `kb_search`/`kb_read` (0/110 attempts) yet scored 10/110
   with them present vs 29/110 with them absent (CIs disjoint); first-draft
-  validity also dropped 46/110 → 28/110. On Qwen3.8-27B the content-off condition
+  validity also dropped 110/110 → 28/110 (first `create_suite` passes the
+  validator). On Qwen3.8-27B the content-off condition
   matches kb-on exactly (110/110), so this is a model-size effect, not a
   harness artifact.
 - Numbers are from **3 runs per task** (temperature 0 is not determinism on
