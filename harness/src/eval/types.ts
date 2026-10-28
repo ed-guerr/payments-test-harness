@@ -216,4 +216,10 @@ export interface EvalReport {
     failed: string[];
     skipped: string[];
   };
+  /** True for committed sample reports (trimmed + scrubbed derivatives of a
+   *  full-fidelity report; the full report stays gitignored). */
+  sample?: boolean;
+  /** Provenance for committed samples: what was trimmed/scrubbed and which
+   *  full-fidelity report(s) it was derived from. */
+  sampleNote?: string;
 }

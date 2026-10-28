@@ -36,7 +36,12 @@ supersede it for pass-rate claims.
 Trimmed full-fidelity samples (agent-authored suites intact, tool results
 truncated) in [`sample-Qwen3.8-27B.json`](artifacts/eval/sample-Qwen3.8-27B.json),
 [`sample-gpt-6-luna.json`](artifacts/eval/sample-gpt-6-luna.json), and
-[`sample-gemma-12b.json`](artifacts/eval/sample-gemma-12b.json):
+[`sample-gemma-12b.json`](artifacts/eval/sample-gemma-12b.json) for the 3-run
+eval, and [`sample-Qwen3.8-27B-3way.json`](artifacts/eval/sample-Qwen3.8-27B-3way.json),
+[`sample-gemma-12b-3way.json`](artifacts/eval/sample-gemma-12b-3way.json), and
+[`sample-gpt-6-luna-3way.json`](artifacts/eval/sample-gpt-6-luna-3way.json) for
+the 10-run three-way (the Luna sample is stitched — its `sampleNote`
+documents the merge):
 
 | model | config | pass | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) |
 |---|---|---|---|---|---|---|---|---|---|

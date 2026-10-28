@@ -139,6 +139,10 @@ export function toMarkdown(report: EvalReport): string {
   out.push(`generated ${report.generatedAt} · ${report.config.runsPerTask} run(s)/task · ` +
     `temperature ${report.config.temperature} · seed ${report.config.seed ?? "unsupported/unset"} · max ${report.config.maxToolSteps} tool steps`);
   out.push("");
+  if (report.sample && report.sampleNote) {
+    out.push(`_Committed sample report: ${report.sampleNote}_`);
+    out.push("");
+  }
   out.push("| config | pass | 95% CI (pass) | suite green | checklist full | avg tool calls | avg suite runs | p50 wall (s) | avg tokens in/out (per run) | avg cost (usd/run) | total tokens in/out | total cost (usd) |");
   out.push("|---|---|---|---|---|---|---|---|---|---|---|---|");
   for (const s of report.summary) {

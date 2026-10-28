@@ -21,6 +21,7 @@
     "runs:clean": "node scripts/clean-runs.js",
     "mcp": "tsx src/mcp/server.ts",
     "eval": "tsx src/eval/cli.ts",
+    "samples:3way": "tsx scripts/make-3way-samples.ts",
     "eval:smoke": "tsx src/eval/cli.ts --smoke",
     "eval:replay": "tsx src/eval/replay.ts",
     "trace-report": "tsx scripts/trace-report.ts",
