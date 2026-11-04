@@ -49,11 +49,23 @@ int handle_reverse_transfer(Server *srv, int client, const Envelope *env)
 {
     const ReverseTransferMsg *msg = (const ReverseTransferMsg *)env->payload;
     int32_t from_after = 0;
-    int rc = db_ledger_reverse(msg->txn_id, &from_after);
+    int rc;
 
     TransferAckMsg ack;
     ack.txn_id = msg->txn_id;
     ack.from_balance_after = -1;
+
+    if (fault_active("reverse_noop"))
+    {
+        /* Fault: ack success without touching the ledger — the entry
+         * stays applied, balances unchanged. */
+        log_msg("ReverseTransfer txn=%u: [fault reverse_noop] acked without reversing",
+                msg->txn_id);
+        ack.status = TR_OK;
+        return server_send(srv, client, MSG_TRANSFER_ACK, &ack, sizeof ack);
+    }
+
+    rc = db_ledger_reverse(msg->txn_id, &from_after);
 
     if (rc == 0)
     {

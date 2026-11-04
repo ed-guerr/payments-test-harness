@@ -5,6 +5,7 @@
 #include "handlers.h"
 #include "pay/ack.h"
 #include "pay/db.h"
+#include "pay/faults.h"
 #include "pay/log.h"
 #include "pay/messages.h"
 #include "pay/msg_ids.h"
@@ -34,7 +35,13 @@ int handle_authorize(Server *srv, int client, const Envelope *env)
          * ST_NOT_COMPLETE. */
         CompletePaymentMsg fwd;
         fwd.txn_id = msg->txn_id;
-        if (fwd_send(FWD_PAY_ORDERS, MSG_COMPLETE_PAYMENT, &fwd, sizeof fwd) != 0)
+        if (fault_active("skip_forward"))
+        {
+            /* Fault: the gateway approves but never forwards
+             * CompletePayment — the payment stays open forever. */
+            log_msg("Authorize txn=%u: [fault skip_forward] forward skipped", msg->txn_id);
+        }
+        else if (fwd_send(FWD_PAY_ORDERS, MSG_COMPLETE_PAYMENT, &fwd, sizeof fwd) != 0)
             log_msg("Authorize txn=%u: forward of CompletePayment failed (will retry on next send)",
                     msg->txn_id);
     }
@@ -63,8 +70,10 @@ int handle_settle(Server *srv, int client, const Envelope *env)
     {
         log_msg("Settle txn=%u rejected: no such payment", msg->txn_id);
     }
-    else if (strcmp(status, "settled") == 0)
+    else if (strcmp(status, "settled") == 0 && !fault_active("double_settle_ok"))
     {
+        /* Fault double_settle_ok: already-settled payments skip this
+         * check and fall through as "not complete". */
         ack.status = ST_SETTLED;
         log_msg("Settle txn=%u rejected: already settled", msg->txn_id);
     }
@@ -80,7 +89,10 @@ int handle_settle(Server *srv, int client, const Envelope *env)
         TransferFundsMsg fwd;
         fwd.txn_id = msg->txn_id;
         memcpy(fwd.from_acct, account, sizeof fwd.from_acct);
-        snprintf(fwd.to_acct, sizeof fwd.to_acct, "%s", PF_RESERVE_ACCOUNT);
+        /* Fault settle_wrong_acct: settle into a seeded account instead of
+         * the reserve — money lands where the books don't expect it. */
+        snprintf(fwd.to_acct, sizeof fwd.to_acct, "%s",
+                 fault_active("settle_wrong_acct") ? "ACCT-002" : PF_RESERVE_ACCOUNT);
         fwd.amount_cents = amount;
 
         if (fwd_send(FWD_LEDGER, MSG_TRANSFER_FUNDS, &fwd, sizeof fwd) != 0)
