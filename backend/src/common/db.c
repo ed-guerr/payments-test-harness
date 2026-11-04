@@ -175,8 +175,17 @@ int db_payment_get(int txn_id, char *account, uint32_t *amount_cents, char *stat
             const unsigned char *stat = sqlite3_column_text(st, 2);
             if (acct != NULL && stat != NULL)
             {
-                snprintf(account, 16, "%s", (const char *)acct);
-                snprintf(status, 16, "%s", (const char *)stat);
+                if (fault_active("oob_copy"))
+                {
+                    /* Fault: pre-fix unbounded copy (reads past the NUL). */
+                    memcpy(account, (const char *)acct, 16);
+                    memcpy(status, (const char *)stat, 16);
+                }
+                else
+                {
+                    snprintf(account, 16, "%s", (const char *)acct);
+                    snprintf(status, 16, "%s", (const char *)stat);
+                }
                 *amount_cents = (uint32_t)sqlite3_column_int64(st, 1);
                 ok = 1;
             }
@@ -338,8 +347,18 @@ int db_ledger_reverse(int txn_id, int32_t *from_after)
             sqlite3_finalize(st);
             return -2;
         }
-        snprintf(postings[n].from_acct, sizeof postings[n].from_acct, "%s", (const char *)from_s);
-        snprintf(postings[n].to_acct, sizeof postings[n].to_acct, "%s", (const char *)to_s);
+        if (fault_active("oob_copy"))
+        {
+            /* Fault: pre-fix unbounded copy (reads past the NUL). */
+            memcpy(postings[n].from_acct, (const char *)from_s, 16);
+            memcpy(postings[n].to_acct, (const char *)to_s, 16);
+        }
+        else
+        {
+            snprintf(postings[n].from_acct, sizeof postings[n].from_acct, "%s",
+                     (const char *)from_s);
+            snprintf(postings[n].to_acct, sizeof postings[n].to_acct, "%s", (const char *)to_s);
+        }
         postings[n].amount = (int32_t)sqlite3_column_int64(st, 2);
         n++;
     }
