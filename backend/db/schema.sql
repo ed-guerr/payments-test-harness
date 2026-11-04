@@ -7,6 +7,7 @@ CREATE TABLE accounts (
     acct            TEXT PRIMARY KEY,
     name            TEXT NOT NULL,
     balance_cents   INTEGER NOT NULL
+                    CONSTRAINT acct_balance_nonneg CHECK (balance_cents >= 0)
 );
 
 CREATE TABLE payments (

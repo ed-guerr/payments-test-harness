@@ -199,30 +199,46 @@ int db_payment_set_status(int txn_id, const char *from_status, const char *to_st
 int db_transfer(int txn_id, const char *from_acct, const char *to_acct, uint32_t amount_cents,
                 int32_t *from_after)
 {
-    int32_t from_bal = 0;
-    int32_t to_bal = 0;
-
     if (strcmp(from_acct, to_acct) == 0)
         return -3;
 
-    if (db_balance(from_acct, &from_bal) != 0 || db_balance(to_acct, &to_bal) != 0)
+    /* Existence is checked outside the transaction; sufficiency is decided
+     * by the conditional debit below, so the check and the mutation are one
+     * atomic statement and no writer can land between them.
+     */
+    if (db_account_exists(from_acct) != 0 || db_account_exists(to_acct) != 0)
         return -2;
-
-    if ((int64_t)from_bal < (int64_t)amount_cents)
-        return -1;
 
     if (db_exec("BEGIN IMMEDIATE") != 0)
         return -4;
 
-    if (db_update_balance(from_acct, -(int32_t)amount_cents) != 0 ||
-        db_update_balance(to_acct, (int32_t)amount_cents) != 0)
+    sqlite3_stmt *st = NULL;
+    int debited = 0;
+    if (sqlite3_prepare_v2(db,
+                           "UPDATE accounts SET balance_cents = balance_cents - ?1 "
+                           "WHERE acct = ?2 AND balance_cents >= ?1",
+                           -1, &st, NULL) == SQLITE_OK)
+    {
+        sqlite3_bind_int64(st, 1, (int64_t)amount_cents);
+        sqlite3_bind_text(st, 2, from_acct, -1, SQLITE_STATIC);
+        if (sqlite3_step(st) == SQLITE_DONE)
+            debited = sqlite3_changes(db) == 1;
+        sqlite3_finalize(st);
+    }
+
+    if (!debited)
+    {
+        db_exec("ROLLBACK");
+        return -1; /* conditional update matched no row: insufficient funds */
+    }
+
+    if (db_update_balance(to_acct, (int32_t)amount_cents) != 0)
     {
         db_exec("ROLLBACK");
         return -4;
     }
 
     int rc = -4;
-    sqlite3_stmt *st = NULL;
     if (sqlite3_prepare_v2(
             db,
             "INSERT INTO ledger_entries (txn_id, from_acct, to_acct, amount_cents, status) "
@@ -244,10 +260,17 @@ int db_transfer(int txn_id, const char *from_acct, const char *to_acct, uint32_t
         return -4;
     }
 
+    int32_t after = 0;
+    if (db_balance(from_acct, &after) != 0)
+    {
+        db_exec("ROLLBACK");
+        return -4;
+    }
+
     if (db_exec("COMMIT") != 0)
         return -4;
 
-    *from_after = from_bal - (int32_t)amount_cents;
+    *from_after = after;
     return 0;
 }
 
@@ -293,10 +316,6 @@ int db_ledger_reverse(int txn_id, int32_t *from_after)
     if (n == 0)
         return -1;
 
-    int32_t from_bal = 0;
-    if (db_balance(postings[0].from_acct, &from_bal) != 0)
-        return -2;
-
     if (db_exec("BEGIN IMMEDIATE") != 0)
         return -2;
 
@@ -322,12 +341,25 @@ int db_ledger_reverse(int txn_id, int32_t *from_after)
         sqlite3_finalize(st);
     }
 
-    if (!ok || db_exec("COMMIT") != 0)
+    if (!ok)
     {
         db_exec("ROLLBACK");
         return -2;
     }
 
-    *from_after = from_bal + postings[0].amount;
+    /* Read the post-reversal balance inside the transaction so the reported
+     * value is the committed one, not a pre-read that a writer could move.
+     */
+    int32_t after = 0;
+    if (db_balance(postings[0].from_acct, &after) != 0)
+    {
+        db_exec("ROLLBACK");
+        return -2;
+    }
+
+    if (db_exec("COMMIT") != 0)
+        return -2;
+
+    *from_after = after;
     return 0;
 }
