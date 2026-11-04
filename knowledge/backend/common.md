@@ -1,6 +1,6 @@
 # backend/src/common — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:33:44.661Z · kb-forge 0.2 · source sha256:0bac9a504d2a
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T03:40:03.209Z · kb-forge 0.2 · source sha256:afe69204fae4
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 | envelope.c | 53 |
 | introspect.c | 85 |
 | log.c | 34 |
-| messages.c | 40 |
+| messages.c | 39 |
 | socket.c | 286 |
 | validate.c | 37 |
 

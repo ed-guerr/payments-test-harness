@@ -4,56 +4,56 @@
     {
       "path": "knowledge/backend/common.md",
       "sourceDir": "backend/src/common",
-      "sourceHash": "0bac9a504d2a",
-      "generatedAt": "2026-11-04T02:33:44.661Z"
+      "sourceHash": "afe69204fae4",
+      "generatedAt": "2026-11-04T03:40:03.209Z"
     },
     {
       "path": "knowledge/backend/pay_orders.md",
       "sourceDir": "backend/src/pay_orders",
       "sourceHash": "b7e8f454c321",
-      "generatedAt": "2026-11-04T02:33:44.672Z"
+      "generatedAt": "2026-11-04T03:40:03.220Z"
     },
     {
       "path": "knowledge/backend/ledger.md",
       "sourceDir": "backend/src/ledger",
       "sourceHash": "c2d161c887eb",
-      "generatedAt": "2026-11-04T02:33:44.673Z"
+      "generatedAt": "2026-11-04T03:40:03.221Z"
     },
     {
       "path": "knowledge/backend/auth_gateway.md",
       "sourceDir": "backend/src/auth_gateway",
       "sourceHash": "0f2d24c6e025",
-      "generatedAt": "2026-11-04T02:33:44.674Z"
+      "generatedAt": "2026-11-04T03:40:03.222Z"
     },
     {
       "path": "knowledge/harness/runner.md",
       "sourceDir": "harness/src/runner",
       "sourceHash": "7cdcf66a9eae",
-      "generatedAt": "2026-11-04T02:33:44.675Z"
+      "generatedAt": "2026-11-04T03:40:03.223Z"
     },
     {
       "path": "knowledge/harness/protocol.md",
       "sourceDir": "harness/src/protocol",
       "sourceHash": "fc17df0607a2",
-      "generatedAt": "2026-11-04T02:33:44.677Z"
+      "generatedAt": "2026-11-04T03:40:03.226Z"
     },
     {
       "path": "knowledge/harness/main.md",
       "sourceDir": "harness/src/main",
       "sourceHash": "b26a57f812b9",
-      "generatedAt": "2026-11-04T02:33:44.678Z"
+      "generatedAt": "2026-11-04T03:40:03.227Z"
     },
     {
       "path": "knowledge/harness/mcp.md",
       "sourceDir": "harness/src/mcp",
       "sourceHash": "30b34fb9a4a0",
-      "generatedAt": "2026-11-04T02:33:44.678Z"
+      "generatedAt": "2026-11-04T03:40:03.227Z"
     },
     {
       "path": "knowledge/harness/renderer.md",
       "sourceDir": "harness/src/renderer",
       "sourceHash": "142d531784ab",
-      "generatedAt": "2026-11-04T02:33:44.679Z"
+      "generatedAt": "2026-11-04T03:40:03.228Z"
     }
   ]
 }
