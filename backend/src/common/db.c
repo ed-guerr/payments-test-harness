@@ -166,10 +166,20 @@ int db_payment_get(int txn_id, char *account, uint32_t *amount_cents, char *stat
         sqlite3_bind_int64(st, 1, txn_id);
         if (sqlite3_step(st) == SQLITE_ROW)
         {
-            memcpy(account, (const char *)sqlite3_column_text(st, 0), 16);
-            *amount_cents = (uint32_t)sqlite3_column_int64(st, 1);
-            memcpy(status, (const char *)sqlite3_column_text(st, 2), 16);
-            ok = 1;
+            /* Bounded copies: sqlite3_column_text returns a NUL-terminated
+             * string (strlen+1 bytes), not a 16-byte field — the raw
+             * 16-byte memcpy read past the NUL. NULL means the column is
+             * SQL NULL; the schema forbids it, treat it as not found.
+             */
+            const unsigned char *acct = sqlite3_column_text(st, 0);
+            const unsigned char *stat = sqlite3_column_text(st, 2);
+            if (acct != NULL && stat != NULL)
+            {
+                snprintf(account, 16, "%s", (const char *)acct);
+                snprintf(status, 16, "%s", (const char *)stat);
+                *amount_cents = (uint32_t)sqlite3_column_int64(st, 1);
+                ok = 1;
+            }
         }
         sqlite3_finalize(st);
     }
@@ -318,8 +328,18 @@ int db_ledger_reverse(int txn_id, int32_t *from_after)
             sqlite3_finalize(st);
             return -2;
         }
-        memcpy(postings[n].from_acct, (const char *)sqlite3_column_text(st, 0), 16);
-        memcpy(postings[n].to_acct, (const char *)sqlite3_column_text(st, 1), 16);
+        /* Bounded copies: the columns hold NUL-terminated strings, not
+         * 16-byte fields — the raw 16-byte memcpy read past the NUL.
+         */
+        const unsigned char *from_s = sqlite3_column_text(st, 0);
+        const unsigned char *to_s = sqlite3_column_text(st, 1);
+        if (from_s == NULL || to_s == NULL)
+        {
+            sqlite3_finalize(st);
+            return -2;
+        }
+        snprintf(postings[n].from_acct, sizeof postings[n].from_acct, "%s", (const char *)from_s);
+        snprintf(postings[n].to_acct, sizeof postings[n].to_acct, "%s", (const char *)to_s);
         postings[n].amount = (int32_t)sqlite3_column_int64(st, 2);
         n++;
     }
