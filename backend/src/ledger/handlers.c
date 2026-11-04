@@ -1,6 +1,7 @@
 #include "handlers.h"
 #include "pay/ack.h"
 #include "pay/db.h"
+#include "pay/faults.h"
 #include "pay/log.h"
 #include "pay/messages.h"
 #include "pay/msg_ids.h"
@@ -72,7 +73,14 @@ int handle_reverse_transfer(Server *srv, int client, const Envelope *env)
          * status) would tell the caller "no entry to reverse" when the
          * real problem is the database. */
         log_msg("ReverseTransfer txn=%u db error", msg->txn_id);
-        return 1;
+        if (fault_active("db_error_as_no_entry"))
+        {
+            /* Fault: pre-fix mapping — the db error is reported as the
+             * business status TR_NO_ENTRY. */
+            ack.status = TR_NO_ENTRY;
+            return server_send(srv, client, MSG_TRANSFER_ACK, &ack, sizeof ack);
+        }
+        return 1; /* internal error: dispatcher replies ErrorAck(ERR_HANDLER) */
     }
 
     return server_send(srv, client, MSG_TRANSFER_ACK, &ack, sizeof ack);
