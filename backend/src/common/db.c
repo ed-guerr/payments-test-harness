@@ -6,6 +6,7 @@
 #include <sqlite3.h>
 
 #include "pay/db.h"
+#include "pay/faults.h"
 #include "pay/log.h"
 
 static sqlite3 *db = NULL; /* process-wide singleton, owned by this file */
@@ -212,12 +213,23 @@ int db_transfer(int txn_id, const char *from_acct, const char *to_acct, uint32_t
     if (db_exec("BEGIN IMMEDIATE") != 0)
         return -4;
 
+    /* Fault: debit with no sufficiency guard — the pre-fix check-then-act
+     * state, in which an over-balance transfer is accepted. The fix's
+     * non-negative backstop clamps the debit, so the fault manifests as an
+     * accepted transfer with the balance zeroed (money created), not the
+     * full overdraft the pre-fix code produced. Deterministic approximation;
+     * the report says so.
+     */
+    const char *debit_sql =
+        fault_active("skip_balance_check")
+            ? "UPDATE accounts SET balance_cents = CASE WHEN balance_cents >= ?1 "
+              "THEN balance_cents - ?1 ELSE 0 END WHERE acct = ?2"
+            : "UPDATE accounts SET balance_cents = balance_cents - ?1 "
+              "WHERE acct = ?2 AND balance_cents >= ?1";
+
     sqlite3_stmt *st = NULL;
     int debited = 0;
-    if (sqlite3_prepare_v2(db,
-                           "UPDATE accounts SET balance_cents = balance_cents - ?1 "
-                           "WHERE acct = ?2 AND balance_cents >= ?1",
-                           -1, &st, NULL) == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, debit_sql, -1, &st, NULL) == SQLITE_OK)
     {
         sqlite3_bind_int64(st, 1, (int64_t)amount_cents);
         sqlite3_bind_text(st, 2, from_acct, -1, SQLITE_STATIC);
