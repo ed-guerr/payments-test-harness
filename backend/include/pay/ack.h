@@ -24,3 +24,4 @@
 #define ERR_OVERSIZED 3
 #define ERR_SIZE_MISMATCH 4
 #define ERR_HANDLER 5
+#define ERR_BAD_FIELD 6

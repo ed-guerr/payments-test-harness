@@ -67,7 +67,10 @@ function writeField(buf: Buffer, f: FieldDef, v: FieldValue): void {
   if (f.type.startsWith("char[")) {
     if (typeof v !== "string") throw new Error(`${f.name}: expected string, got ${typeof v}`);
     const b = Buffer.from(v, "utf8");
-    if (b.length > f.size) throw new Error(`${f.name}: ${v} exceeds ${f.size} bytes`);
+    // The protocol requires NUL-terminated string fields, so an exactly
+    // full string (no room for the NUL) is a protocol violation.
+    if (b.length >= f.size)
+      throw new Error(`${f.name}: ${v} is ${b.length} bytes, field holds ${f.size - 1}`);
     b.copy(buf, f.offset); // remainder stays NUL
     return;
   }

@@ -1,6 +1,6 @@
 # backend/src/common — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-10-17T00:22:13.811Z · kb-forge 0.2 · source sha256:103595b2628d
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:23:11.232Z · kb-forge 0.2 · source sha256:0bac9a504d2a
 
 ## Purpose
 
@@ -11,12 +11,13 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 | file | ~lines |
 |---|---|
 | args.c | 82 |
-| db.c | 334 |
+| db.c | 417 |
 | envelope.c | 53 |
 | introspect.c | 85 |
 | log.c | 34 |
-| messages.c | 39 |
+| messages.c | 40 |
 | socket.c | 286 |
+| validate.c | 37 |
 
 ## Domain vocabulary
 
@@ -27,7 +28,7 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 | `message table` | the PF_MSG_LIST X-macro lists in include/pay/messages.h |
 | `registry` | output of --introspect (src/common/introspect.c); consumed by the harness |
 | `drain client` | drain_client() in src/common/socket.c:114 — returns 0 = keep the connection open; non-zero closes it (server_run, socket.c:247) |
-| `ack status codes` | include/pay/ack.h — ACK_* (payment), TR_* (transfer), ST_* (settle), ERR_* (ErrorAck codes 1-5) |
+| `ack status codes` | include/pay/ack.h — ACK_* (payment), TR_* (transfer), ST_* (settle), ERR_* (ErrorAck codes 1-6) |
 
 ## Key functions
 
@@ -35,16 +36,16 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 |---|---|
 | `parse_port(const char *s, uint16_t *port)` | args.c:10 |
 | `args_parse(int argc, char **argv, uint16_t port_default, Args *args)` | args.c:22 |
-| `db_exec(const char *sql)` | db.c:13 |
-| `db_open(const char *path)` | db.c:25 |
-| `db_close(void)` | db.c:62 |
-| `db_account_exists(const char *acct)` | db.c:71 |
-| `db_balance(const char *acct, int32_t *balance)` | db.c:89 |
-| `db_update_balance(const char *acct, int32_t delta_cents)` | db.c:109 |
-| `db_payment_insert(int txn_id, const char *account, uint32_t amount_cents, const char *currency)` | db.c:128 |
-| `db_payment_get(int txn_id, char *account, uint32_t *amount_cents, char *status)` | db.c:156 |
-| `db_payment_set_status(int txn_id, const char *from_status, const char *to_status)` | db.c:179 |
-| `db_ledger_reverse(int txn_id, int32_t *from_after)` | db.c:254 |
+| `db_exec(const char *sql)` | db.c:14 |
+| `db_open(const char *path)` | db.c:26 |
+| `db_close(void)` | db.c:63 |
+| `db_account_exists(const char *acct)` | db.c:72 |
+| `db_balance(const char *acct, int32_t *balance)` | db.c:90 |
+| `db_update_balance(const char *acct, int32_t delta_cents)` | db.c:110 |
+| `db_payment_insert(int txn_id, const char *account, uint32_t amount_cents, const char *currency)` | db.c:129 |
+| `db_payment_get(int txn_id, char *account, uint32_t *amount_cents, char *status)` | db.c:157 |
+| `db_payment_set_status(int txn_id, const char *from_status, const char *to_status)` | db.c:199 |
+| `db_ledger_reverse(int txn_id, int32_t *from_after)` | db.c:308 |
 | `env_decode(const uint8_t *buf, size_t len, Envelope *env, size_t *consumed)` | envelope.c:28 |
 | `json_write_string(const char *s)` | introspect.c:6 |
 | `introspect_print(const char *process, uint16_t port, const MessageDef *table, size_t n_msgs)` | introspect.c:39 |
@@ -61,6 +62,7 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 | `server_run(Server *srv, msg_handler_t dispatch, const char *proc_name)` | socket.c:203 |
 | `server_send(Server *srv, int client, uint16_t msg_id, const void *payload, size_t len)` | socket.c:257 |
 | `server_send_error(Server *srv, int client, uint16_t msg_id, uint8_t code, const char *detail)` | socket.c:275 |
+| `validate_payload(const MessageDef *def, const void *payload)` | validate.c:10 |
 
 ## Common modification points
 
@@ -74,6 +76,7 @@ Shared plumbing for all three backend processes: the wire codec (fixed 8-byte li
 |---|---|---|
 | socket.c | close condition: drain_client returns 0 = keep open, non-zero = close; server_run closes only on != 0 | regression closes clients after every successful response; smoke test 18/19 catches it |
 | envelope.c | oversized frames (payload_len > PF_MAX_PAYLOAD 2048) and size mismatches | validated in decode; ErrorAck codes 3 (ERR_OVERSIZED) / 4 (ERR_SIZE_MISMATCH) |
+| validate.c | unterminated string fields or out-of-range amounts from a raw client | dispatch walks the X-macro field table before the handler; ErrorAck code 6 (ERR_BAD_FIELD) |
 | introspect.c | registry drift: C structs change, registry not regenerated | npm run gen:registry + suites validate against it |
 | db.c | all three processes open the SAME SQLite file (each is spawned with --db <file>; WAL mode), so a crash mid-transaction can leave a shared db in a bad state | all writes run inside explicit BEGIN IMMEDIATE ... COMMIT transactions (see db.c) |
 

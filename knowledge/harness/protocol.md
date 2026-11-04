@@ -1,6 +1,6 @@
 # harness/src/protocol — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-10-17T00:22:13.827Z · kb-forge 0.2 · source sha256:bb9d9b834c74
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:23:11.248Z · kb-forge 0.2 · source sha256:fc17df0607a2
 
 ## Purpose
 
@@ -11,7 +11,7 @@ Wire protocol layer in TypeScript. registry.json (generated from the C binaries'
 | file | ~lines |
 |---|---|
 | codec.test.ts | 59 |
-| codec.ts | 133 |
+| codec.ts | 136 |
 | conn.ts | 108 |
 | registry.json | 365 |
 | types.ts | 50 |
@@ -36,9 +36,9 @@ Wire protocol layer in TypeScript. registry.json (generated from the C binaries'
 | `pack(proc: string, name: string, fields: Record<string, FieldValue>)` | codec.ts:43 |
 | `unpack(proc: string, name: string, payload: Buffer)` | codec.ts:54 |
 | `writeField(buf: Buffer, f: FieldDef, v: FieldValue)` | codec.ts:66 |
-| `readField(buf: Buffer, f: FieldDef)` | codec.ts:95 |
-| `frameHeader(msgId: number, payloadLen: number)` | codec.ts:116 |
-| `parseHeader(hdr: Buffer)` | codec.ts:125 |
+| `readField(buf: Buffer, f: FieldDef)` | codec.ts:98 |
+| `frameHeader(msgId: number, payloadLen: number)` | codec.ts:119 |
+| `parseHeader(hdr: Buffer)` | codec.ts:128 |
 | `Conn` | conn.ts:20 |
 
 ## Common modification points

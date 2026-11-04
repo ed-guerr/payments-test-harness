@@ -1,6 +1,6 @@
 # backend/src/pay_orders — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-10-17T00:22:13.822Z · kb-forge 0.2 · source sha256:c029293ed970
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:23:11.243Z · kb-forge 0.2 · source sha256:5886621c7366
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Payment lifecycle owner. Serves :9101. Creates, cancels, and completes payment r
 |---|---|
 | handlers.c | 84 |
 | handlers.h | 8 |
-| main.c | 80 |
+| main.c | 88 |
 
 ## Domain vocabulary
 
@@ -40,8 +40,8 @@ Payment lifecycle owner. Serves :9101. Creates, cancels, and completes payment r
 | `handle_create_payment(Server *srv, int client, const Envelope *env)` | handlers.c:9 |
 | `handle_cancel_payment(Server *srv, int client, const Envelope *env)` | handlers.c:45 |
 | `handle_complete_payment(Server *srv, int client, const Envelope *env)` | handlers.c:65 |
-| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:27 |
-| `main(int argc, char **argv)` | main.c:54 |
+| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:28 |
+| `main(int argc, char **argv)` | main.c:62 |
 
 ## Common modification points
 

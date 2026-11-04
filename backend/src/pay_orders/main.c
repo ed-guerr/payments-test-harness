@@ -12,6 +12,7 @@
 #include "pay/messages.h"
 #include "pay/msg_ids.h"
 #include "pay/socket.h"
+#include "pay/validate.h"
 
 static const MessageDef PAY_ORDERS_MSGS[] = {
     {MSG_CREATE_PAYMENT, "CreatePayment", "in", sizeof(CreatePaymentMsg), CreatePaymentMsg_fields,
@@ -38,6 +39,13 @@ static int dispatch(Server *srv, int client, const Envelope *env)
             log_msg("msg %s rejected: expected %zu bytes, got %u", def->name, def->struct_size,
                     env->payload_len);
             server_send_error(srv, client, env->msg_id, ERR_SIZE_MISMATCH, "payload size mismatch");
+            return 0;
+        }
+
+        if (validate_payload(def, env->payload) != 0)
+        {
+            log_msg("msg %s rejected: malformed field", def->name);
+            server_send_error(srv, client, env->msg_id, ERR_BAD_FIELD, "malformed field");
             return 0;
         }
 

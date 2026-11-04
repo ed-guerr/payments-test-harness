@@ -44,7 +44,7 @@ export const META: DirMeta[] = [
       ["message table", "the PF_MSG_LIST X-macro lists in include/pay/messages.h"],
       ["registry", "output of --introspect (src/common/introspect.c); consumed by the harness"],
       ["drain client", "drain_client() in src/common/socket.c:114 — returns 0 = keep the connection open; non-zero closes it (server_run, socket.c:247)"],
-      ["ack status codes", "include/pay/ack.h — ACK_* (payment), TR_* (transfer), ST_* (settle), ERR_* (ErrorAck codes 1-5)"],
+      ["ack status codes", "include/pay/ack.h — ACK_* (payment), TR_* (transfer), ST_* (settle), ERR_* (ErrorAck codes 1-6)"],
     ],
     messageNotes: {},
     modificationPoints: [
@@ -54,6 +54,7 @@ export const META: DirMeta[] = [
     risks: [
       ["socket.c", "close condition: drain_client returns 0 = keep open, non-zero = close; server_run closes only on != 0", "regression closes clients after every successful response; smoke test 18/19 catches it"],
       ["envelope.c", "oversized frames (payload_len > PF_MAX_PAYLOAD 2048) and size mismatches", "validated in decode; ErrorAck codes 3 (ERR_OVERSIZED) / 4 (ERR_SIZE_MISMATCH)"],
+      ["validate.c", "unterminated string fields or out-of-range amounts from a raw client", "dispatch walks the X-macro field table before the handler; ErrorAck code 6 (ERR_BAD_FIELD)"],
       ["introspect.c", "registry drift: C structs change, registry not regenerated", "npm run gen:registry + suites validate against it"],
       ["db.c", "all three processes open the SAME SQLite file (each is spawned with --db <file>; WAL mode), so a crash mid-transaction can leave a shared db in a bad state", "all writes run inside explicit BEGIN IMMEDIATE ... COMMIT transactions (see db.c)"],
     ],

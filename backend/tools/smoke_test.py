@@ -94,6 +94,10 @@ class Codec:
             v = fields[f["name"]]
             if f["type"].startswith("char["):
                 v = v.encode()
+                # protocol requires NUL-terminated string fields: an
+                # exactly full string has no room for the NUL
+                if len(v) >= f["size"]:
+                    raise AssertionError(f"{f['name']}: {len(v)} bytes, field holds {f['size'] - 1}")
             vals.append(v)
         return struct.pack(fmt_for(m["fields"]), *vals)
 

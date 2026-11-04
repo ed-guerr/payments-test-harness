@@ -36,7 +36,7 @@ machine-readable form.
 
 | Message | id | dir | size | fields (name type@offset) |
 |---|---|---|---|---|
-| `CreatePayment` | 10 | in | 27 | txn_id uint32@0, account char[16]@4, amount_cents uint32@20, currency char[3]@24 |
+| `CreatePayment` | 10 | in | 28 | txn_id uint32@0, account char[16]@4, amount_cents uint32@20, currency char[4]@24 |
 | `CancelPayment` | 11 | in | 20 | txn_id uint32@0, reason char[16]@4 |
 | `CompletePayment` | 12 | in | 4 | txn_id uint32@0 |
 | `PaymentAck` | 20 | out | 5 | txn_id uint32@0, status uint8@4 |
@@ -84,6 +84,7 @@ structurally bad or a handler fails:
 | 3 | oversized payload (payload_len > 2048) |
 | 4 | payload size mismatch (len ≠ sizeof(struct)) |
 | 5 | handler returned non-zero (internal error, e.g. db failure) |
+| 6 | malformed field (string field not NUL-terminated, or amount_cents outside 1..2³¹−1) |
 
 ## How the registry is generated (callout)
 

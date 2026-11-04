@@ -1,6 +1,6 @@
 # backend/src/auth_gateway — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-10-17T00:22:13.824Z · kb-forge 0.2 · source sha256:08396fa2df73
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:23:11.245Z · kb-forge 0.2 · source sha256:64ac5b66723e
 
 ## Purpose
 
@@ -14,7 +14,7 @@ External boundary for authorization and settlement. Serves external clients on :
 | forward.h | 20 |
 | handlers.c | 104 |
 | handlers.h | 7 |
-| main.c | 89 |
+| main.c | 97 |
 
 ## Domain vocabulary
 
@@ -46,8 +46,8 @@ External boundary for authorization and settlement. Serves external clients on :
 | `fwd_close(void)` | forward.c:115 |
 | `handle_authorize(Server *srv, int client, const Envelope *env)` | handlers.c:13 |
 | `handle_settle(Server *srv, int client, const Envelope *env)` | handlers.c:49 |
-| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:28 |
-| `main(int argc, char **argv)` | main.c:55 |
+| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:29 |
+| `main(int argc, char **argv)` | main.c:63 |
 
 ## Common modification points
 

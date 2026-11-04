@@ -4,56 +4,56 @@
     {
       "path": "knowledge/backend/common.md",
       "sourceDir": "backend/src/common",
-      "sourceHash": "103595b2628d",
-      "generatedAt": "2026-10-17T00:22:13.811Z"
+      "sourceHash": "0bac9a504d2a",
+      "generatedAt": "2026-11-04T02:23:11.232Z"
     },
     {
       "path": "knowledge/backend/pay_orders.md",
       "sourceDir": "backend/src/pay_orders",
-      "sourceHash": "c029293ed970",
-      "generatedAt": "2026-10-17T00:22:13.822Z"
+      "sourceHash": "5886621c7366",
+      "generatedAt": "2026-11-04T02:23:11.243Z"
     },
     {
       "path": "knowledge/backend/ledger.md",
       "sourceDir": "backend/src/ledger",
-      "sourceHash": "f6e14d6d6f0b",
-      "generatedAt": "2026-10-17T00:22:13.824Z"
+      "sourceHash": "b64577efbd48",
+      "generatedAt": "2026-11-04T02:23:11.244Z"
     },
     {
       "path": "knowledge/backend/auth_gateway.md",
       "sourceDir": "backend/src/auth_gateway",
-      "sourceHash": "08396fa2df73",
-      "generatedAt": "2026-10-17T00:22:13.824Z"
+      "sourceHash": "64ac5b66723e",
+      "generatedAt": "2026-11-04T02:23:11.245Z"
     },
     {
       "path": "knowledge/harness/runner.md",
       "sourceDir": "harness/src/runner",
       "sourceHash": "7cdcf66a9eae",
-      "generatedAt": "2026-10-17T00:22:13.825Z"
+      "generatedAt": "2026-11-04T02:23:11.246Z"
     },
     {
       "path": "knowledge/harness/protocol.md",
       "sourceDir": "harness/src/protocol",
-      "sourceHash": "bb9d9b834c74",
-      "generatedAt": "2026-10-17T00:22:13.827Z"
+      "sourceHash": "fc17df0607a2",
+      "generatedAt": "2026-11-04T02:23:11.248Z"
     },
     {
       "path": "knowledge/harness/main.md",
       "sourceDir": "harness/src/main",
       "sourceHash": "b26a57f812b9",
-      "generatedAt": "2026-10-17T00:22:13.828Z"
+      "generatedAt": "2026-11-04T02:23:11.249Z"
     },
     {
       "path": "knowledge/harness/mcp.md",
       "sourceDir": "harness/src/mcp",
       "sourceHash": "30b34fb9a4a0",
-      "generatedAt": "2026-10-17T00:22:13.829Z"
+      "generatedAt": "2026-11-04T02:23:11.249Z"
     },
     {
       "path": "knowledge/harness/renderer.md",
       "sourceDir": "harness/src/renderer",
       "sourceHash": "142d531784ab",
-      "generatedAt": "2026-10-17T00:22:13.830Z"
+      "generatedAt": "2026-11-04T02:23:11.250Z"
     }
   ]
 }

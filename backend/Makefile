@@ -37,7 +37,8 @@ COMMON_SRCS = src/common/log.c \
               src/common/db.c \
               src/common/introspect.c \
               src/common/messages.c \
-              src/common/args.c
+              src/common/args.c \
+              src/common/validate.c
 
 OBJS_COMMON = $(COMMON_SRCS:%.c=$(BUILD_DIR)/obj/%.o)
 PROCS = pay-orders ledger auth-gateway

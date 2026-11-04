@@ -8,7 +8,7 @@
           "id": 10,
           "name": "CreatePayment",
           "direction": "in",
-          "size": 27,
+          "size": 28,
           "response": 20,
           "fields": [
             {
@@ -31,8 +31,8 @@
             },
             {
               "name": "currency",
-              "type": "char[3]",
-              "size": 3,
+              "type": "char[4]",
+              "size": 4,
               "offset": 24
             }
           ]

@@ -9,7 +9,7 @@
  * answer them — lives in that process's main.c.
  *
  * All monetary amounts are integer cents. All char[] fields are NUL-padded
- * on the wire (senders must NUL-terminate; receivers may rely on it).
+ * on the wire (senders must NUL-terminate; receivers validate it).
  */
 
 /*
@@ -19,6 +19,7 @@
  * table maps them back to their canonical "char[N]" strings.
  */
 typedef char PF_S3[3];
+typedef char PF_S4[4];
 typedef char PF_S16[16];
 typedef char PF_S24[24];
 
@@ -33,7 +34,7 @@ typedef char PF_S24[24];
     F(T, txn_id, uint32_t)                                                                         \
     F(T, account, PF_S16)                                                                          \
     F(T, amount_cents, uint32_t)                                                                   \
-    F(T, currency, PF_S3)
+    F(T, currency, PF_S4)
 
 #define PF_FIELDS_CancelPayment(T, F)                                                              \
     F(T, txn_id, uint32_t)                                                                         \
