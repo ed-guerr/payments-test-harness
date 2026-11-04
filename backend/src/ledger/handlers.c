@@ -67,8 +67,12 @@ int handle_reverse_transfer(Server *srv, int client, const Envelope *env)
     }
     else
     {
-        ack.status = TR_NO_ENTRY; /* db error reported via ack; logged below */
+        /* db error: internal failure — the dispatcher replies
+         * ErrorAck(ERR_HANDLER). Mapping it to TR_NO_ENTRY (a business
+         * status) would tell the caller "no entry to reverse" when the
+         * real problem is the database. */
         log_msg("ReverseTransfer txn=%u db error", msg->txn_id);
+        return 1;
     }
 
     return server_send(srv, client, MSG_TRANSFER_ACK, &ack, sizeof ack);

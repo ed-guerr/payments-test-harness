@@ -8,7 +8,7 @@ Stdlib only. It verifies:
      forwards CompletePayment) -> Settle (which forwards TransferFunds)
   4. error paths: duplicate txn, unknown account, insufficient funds,
      self-transfer, reverse transfer, already-settled, unknown message id,
-     payload size mismatch, malformed field, bad magic
+     payload size mismatch, malformed field, db error, bad magic
   5. the resulting SQLite state (payment statuses + balances)
 
 Usage:
@@ -378,6 +378,25 @@ def _run_flow(smoke, codec, socks):
     mid, buf = led.recv_frame()
     ack = codec.unpack("ledger", codec.name("ledger", mid), buf)
     c("ReverseTransfer 9003 again -> ack 4 (no entry)", ack["status"] == 4, str(ack))
+
+    # -- db error path ---------------------------------------------------------
+    # 9 applied entries for one txn exceed the ledger's MAX_POSTINGS (8):
+    # db_ledger_reverse hits a real db-layer error, which must come back as
+    # ErrorAck code 5 (internal), not as the business status TR_NO_ENTRY.
+    conn2 = sqlite3.connect(smoke.db_path)
+    conn2.executemany(
+        "INSERT INTO ledger_entries (txn_id, from_acct, to_acct, amount_cents, status) "
+        "VALUES (9009, 'ACCT-001', 'ACCT-002', 1, 'applied')", [()] * 9)
+    conn2.commit()
+
+    led.send_frame(31, codec.pack("ledger", "ReverseTransfer", txn_id=9009))
+    mid, buf = led.recv_frame()
+    err = codec.unpack("ledger", codec.name("ledger", mid), buf)
+    c("db error -> ErrorAck code 5 (not TR_NO_ENTRY)", mid == 255 and err["code"] == 5, str(err))
+
+    conn2.execute("DELETE FROM ledger_entries WHERE txn_id = 9009")
+    conn2.commit()
+    conn2.close()
 
     # -- cancel ----------------------------------------------------------------
     pay.send_frame(10, codec.pack("pay-orders", "CreatePayment", txn_id=9006, account="ACCT-002",
