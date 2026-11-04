@@ -431,6 +431,24 @@ Reports are off by default so routine runs (and the 66-run eval) don't
 litter the tree; flip the flag when you want an artifact of a run to
 attach to a bug report or a review.
 
+### Do the suites actually catch bugs? Fault injection
+
+The backend can also be built with eight one-line faults compiled in
+(`make FAULTS=1`, selected at runtime with `PAY_FAULT=<name>`): four
+business-logic regressions (skipped forward, settle to the wrong
+account, double settle, no-op reverse) and four literal reverts of real
+bugs found and fixed in this codebase (the balance race, the unbounded
+copy, the missing wire validation, the db error reported as a business
+status). `npm run eval:mutants` runs every committed suite against each
+fault and writes the kill matrix —
+[`artifacts/eval/sample-mutants.md`](artifacts/eval/sample-mutants.md).
+Result: **5/8 killed** — every business fault and the balance race are
+caught by a committed suite. The three survivors are exactly the bugs
+unobservable from the protocol surface, and the report says what pins
+each one (smoke-test checks — and, for the out-of-bounds copy, code
+review, since even the ASan build does not flag it: the overrun stays
+inside SQLite's own heap block).
+
 ## The wire protocol
 
 Little-endian frame: `u16 magic (0x5046) | u16 msg_id | u32 payload_len |

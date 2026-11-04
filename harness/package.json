@@ -23,6 +23,7 @@
     "eval": "tsx src/eval/cli.ts",
     "samples:3way": "tsx scripts/make-3way-samples.ts",
     "eval:smoke": "tsx src/eval/cli.ts --smoke",
+    "eval:mutants": "tsx scripts/run-mutants.ts",
     "eval:replay": "tsx src/eval/replay.ts",
     "trace-report": "tsx scripts/trace-report.ts",
     "test:unit": "tsx --test src/protocol/codec.test.ts src/runner/matchAck.test.ts src/runner/report.test.ts src/eval/report.test.ts src/eval/tracereport.test.ts src/eval/agent.test.ts src/eval/ablation.test.ts src/eval/cli.test.ts src/eval/manifest.test.ts src/kb/kb.test.ts src/backend/suites.test.ts src/db/db.test.ts",
