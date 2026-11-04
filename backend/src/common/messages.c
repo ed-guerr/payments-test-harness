@@ -7,7 +7,6 @@
 
 /* PF_TYPE_STR: canonical wire-type strings for the introspection table. */
 #define PF_TYPE_STR(t) PF_TYPE_STR_##t
-#define PF_TYPE_STR_PF_S3 "char[3]"
 #define PF_TYPE_STR_PF_S4 "char[4]"
 #define PF_TYPE_STR_PF_S16 "char[16]"
 #define PF_TYPE_STR_PF_S24 "char[24]"

@@ -18,7 +18,6 @@
  * invalid C), so field lists name these aliases instead; the introspection
  * table maps them back to their canonical "char[N]" strings.
  */
-typedef char PF_S3[3];
 typedef char PF_S4[4];
 typedef char PF_S16[16];
 typedef char PF_S24[24];
