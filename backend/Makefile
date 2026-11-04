@@ -2,6 +2,7 @@
 #
 # Targets:
 #   make            build all three processes into build/
+#   make FAULTS=1   fault-injection build (PAY_FAULT=<name> selects at runtime)
 #   make check      ASan/UBSan build (build-asan/) + full smoke test
 #   make run        start all three processes (logs in build/, pids in build/run.pid)
 #   make stop       stop the processes started by `make run`
@@ -13,6 +14,7 @@
 CC        ?= cc
 BUILD_DIR ?= build
 ASAN      ?= 0
+FAULTS    ?= 0
 
 .DEFAULT_GOAL := all
 
@@ -22,6 +24,11 @@ ifeq ($(ASAN),1)
   CFLAGS += -g -fsanitize=address,undefined
 else
   CFLAGS += -O2
+endif
+# PAY_FAULTS compiles in the fault branches; without it, fault_active() is a
+# constant 0 and the fault code is dropped by the optimizer (see pay/faults.h).
+ifeq ($(FAULTS),1)
+  CFLAGS += -DPAY_FAULTS
 endif
 
 COMMON_SRCS = src/common/log.c \
