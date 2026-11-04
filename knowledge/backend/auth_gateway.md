@@ -1,6 +1,6 @@
 # backend/src/auth_gateway — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:23:11.245Z · kb-forge 0.2 · source sha256:64ac5b66723e
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:33:44.674Z · kb-forge 0.2 · source sha256:0f2d24c6e025
 
 ## Purpose
 
@@ -12,9 +12,9 @@ External boundary for authorization and settlement. Serves external clients on :
 |---|---|
 | forward.c | 126 |
 | forward.h | 20 |
-| handlers.c | 104 |
+| handlers.c | 116 |
 | handlers.h | 7 |
-| main.c | 97 |
+| main.c | 98 |
 
 ## Domain vocabulary
 
@@ -44,10 +44,10 @@ External boundary for authorization and settlement. Serves external clients on :
 | `fwd_init(uint16_t orders_port, uint16_t ledger_port)` | forward.c:68 |
 | `fwd_send(int target, uint16_t msg_id, const void *payload, size_t len)` | forward.c:79 |
 | `fwd_close(void)` | forward.c:115 |
-| `handle_authorize(Server *srv, int client, const Envelope *env)` | handlers.c:13 |
-| `handle_settle(Server *srv, int client, const Envelope *env)` | handlers.c:49 |
-| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:29 |
-| `main(int argc, char **argv)` | main.c:63 |
+| `handle_authorize(Server *srv, int client, const Envelope *env)` | handlers.c:14 |
+| `handle_settle(Server *srv, int client, const Envelope *env)` | handlers.c:56 |
+| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:30 |
+| `main(int argc, char **argv)` | main.c:64 |
 
 ## Common modification points
 

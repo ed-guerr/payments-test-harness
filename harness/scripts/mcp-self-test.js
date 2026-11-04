@@ -77,8 +77,8 @@ async function callTool(name, args) {
   }
 
   const schema = await callTool("get_message_schema", { process: "pay-orders", message: "CreatePayment" });
-  if (schema.name !== "CreatePayment" || schema.size !== 27) throw new Error("bad CreatePayment schema");
-  console.log("get_message_schema ok: CreatePayment 27B, fields:", schema.fields.map((f) => f.name).join(","));
+  if (schema.name !== "CreatePayment" || schema.size !== 28) throw new Error("bad CreatePayment schema");
+  console.log("get_message_schema ok: CreatePayment 28B, fields:", schema.fields.map((f) => f.name).join(","));
 
   const suite = {
     name: "mcp-selftest-suite",

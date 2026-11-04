@@ -1,6 +1,6 @@
 # backend/src/ledger — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:23:11.244Z · kb-forge 0.2 · source sha256:b64577efbd48
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-04T02:33:44.673Z · kb-forge 0.2 · source sha256:c2d161c887eb
 
 ## Purpose
 
@@ -10,9 +10,9 @@ Double-entry ledger. Serves :9102. Moves cents between accounts atomically: ever
 
 | file | ~lines |
 |---|---|
-| handlers.c | 76 |
+| handlers.c | 100 |
 | handlers.h | 7 |
-| main.c | 87 |
+| main.c | 88 |
 
 ## Domain vocabulary
 
@@ -36,10 +36,10 @@ Double-entry ledger. Serves :9102. Moves cents between accounts atomically: ever
 
 | function | defined at |
 |---|---|
-| `handle_transfer_funds(Server *srv, int client, const Envelope *env)` | handlers.c:9 |
-| `handle_reverse_transfer(Server *srv, int client, const Envelope *env)` | handlers.c:47 |
-| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:27 |
-| `main(int argc, char **argv)` | main.c:61 |
+| `handle_transfer_funds(Server *srv, int client, const Envelope *env)` | handlers.c:10 |
+| `handle_reverse_transfer(Server *srv, int client, const Envelope *env)` | handlers.c:48 |
+| `dispatch(Server *srv, int client, const Envelope *env)` | main.c:28 |
+| `main(int argc, char **argv)` | main.c:62 |
 
 ## Common modification points
 

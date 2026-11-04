@@ -26,7 +26,7 @@ fi
 step "[2/9] backend build  (C11, -Wall -Wextra -Werror, zero warnings)"
 make -C ../backend
 
-step "[3/9] backend check  (ASan + UBSan build, 28-check protocol smoke test)"
+step "[3/9] backend check  (ASan + UBSan build, 31-check protocol smoke test)"
 make -C ../backend check
 
 step "[4/9] C formatting  (clang-format --dry-run -Werror)"
