@@ -8,7 +8,7 @@ Stdlib only. It verifies:
      forwards CompletePayment) -> Settle (which forwards TransferFunds)
   4. error paths: duplicate txn, unknown account, insufficient funds,
      self-transfer, reverse transfer, already-settled, unknown message id,
-     payload size mismatch, bad magic
+     payload size mismatch, malformed field, bad magic
   5. the resulting SQLite state (payment statuses + balances)
 
 Usage:
@@ -394,10 +394,25 @@ def _run_flow(smoke, codec, socks):
     err = codec.unpack("pay-orders", codec.name("pay-orders", mid), buf)
     c("unknown message id -> ErrorAck code 1", mid == 255 and err["code"] == 1 and err["msg_id"] == 999, str(err))
 
-    pay.send_frame(10, b"\x00" * 10)  # CreatePayment expects 27 bytes
+    pay.send_frame(10, b"\x00" * 10)  # CreatePayment expects 28 bytes
     mid, buf = pay.recv_frame()
     err = codec.unpack("pay-orders", codec.name("pay-orders", mid), buf)
     c("size mismatch -> ErrorAck code 4", mid == 255 and err["code"] == 4, str(err))
+
+    # CreatePayment with the currency field full of data (no NUL byte) —
+    # malformed per the NUL-termination contract
+    pay.send_frame(10, struct.pack("<I", 9007) + b"ACCT-001".ljust(16, b"\x00") +
+                   struct.pack("<I", 500) + b"USDX")
+    mid, buf = pay.recv_frame()
+    err = codec.unpack("pay-orders", codec.name("pay-orders", mid), buf)
+    c("malformed field (unterminated) -> ErrorAck code 6", mid == 255 and err["code"] == 6, str(err))
+
+    # CreatePayment with amount_cents = 0 — out of range (1..INT32_MAX)
+    pay.send_frame(10, codec.pack("pay-orders", "CreatePayment", txn_id=9008, account="ACCT-001",
+                                  amount_cents=0, currency="USD"))
+    mid, buf = pay.recv_frame()
+    err = codec.unpack("pay-orders", codec.name("pay-orders", mid), buf)
+    c("malformed field (amount 0) -> ErrorAck code 6", mid == 255 and err["code"] == 6, str(err))
 
     bad = Conn(9101)
     bad.sock.sendall(b"\xde\xad\xbe\xef" + b"\x00" * 4)

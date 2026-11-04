@@ -8,6 +8,7 @@
 #include "pay/ack.h"
 #include "pay/args.h"
 #include "pay/db.h"
+#include "pay/faults.h"
 #include "pay/introspect.h"
 #include "pay/log.h"
 #include "pay/messages.h"
@@ -43,7 +44,7 @@ static int dispatch(Server *srv, int client, const Envelope *env)
             return 0;
         }
 
-        if (validate_payload(def, env->payload) != 0)
+        if (!fault_active("no_field_validation") && validate_payload(def, env->payload) != 0)
         {
             log_msg("msg %s rejected: malformed field", def->name);
             server_send_error(srv, client, env->msg_id, ERR_BAD_FIELD, "malformed field");
