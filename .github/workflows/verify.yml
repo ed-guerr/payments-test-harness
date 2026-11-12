@@ -98,6 +98,14 @@ jobs:
         working-directory: backend
         run: make
 
+      # Electron 44 downloads the binary lazily on first use; do it
+      # explicitly so a stalled download fails in its own step instead
+      # of hanging the self-test below.
+      - name: Fetch Electron binary
+        working-directory: harness
+        timeout-minutes: 5
+        run: node node_modules/electron/install.js
+
       # Builds the app, loads the real window, then drives the renderer
       # through the actual preload bridge: listSuites +
       # runSuite('payment-happy-path'). Exits non-zero on any failure.
@@ -106,8 +114,13 @@ jobs:
       # ships chrome-sandbox at mode 0755 and runners are non-root, so
       # Chromium aborts on the "found but not root:4755" helper. The
       # self-test verifies the preload bridge, not the Chromium sandbox.
+      #
+      # Step timeout: the self-test's did-finish-load / IPC awaits have no
+      # internal watchdog; bound a hang at 10m so the run fails cleanly
+      # instead of the 15m job timeout cancelling the whole run.
       - name: xvfb-run npm run test:e2e
         working-directory: harness
+        timeout-minutes: 10
         run: xvfb-run -a npm run test:e2e -- --no-sandbox
 
   docker:
