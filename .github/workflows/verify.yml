@@ -101,9 +101,14 @@ jobs:
       # Builds the app, loads the real window, then drives the renderer
       # through the actual preload bridge: listSuites +
       # runSuite('payment-happy-path'). Exits non-zero on any failure.
+      #
+      # --no-sandbox: the standard Electron-in-CI flag. The electron zip
+      # ships chrome-sandbox at mode 0755 and runners are non-root, so
+      # Chromium aborts on the "found but not root:4755" helper. The
+      # self-test verifies the preload bridge, not the Chromium sandbox.
       - name: xvfb-run npm run test:e2e
         working-directory: harness
-        run: xvfb-run -a npm run test:e2e
+        run: xvfb-run -a npm run test:e2e -- --no-sandbox
 
   docker:
     name: docker image (build + headless run)
