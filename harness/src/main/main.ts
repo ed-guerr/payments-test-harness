@@ -7,7 +7,7 @@
  * (contextIsolation, no nodeIntegration) — everything goes through preload.
  */
 import { app, BrowserWindow, ipcMain } from "electron";
-import { execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
@@ -27,7 +27,8 @@ type UiEvent =
   | { type: "suites-changed"; suites: SuiteMeta[] };
 
 /**
- * SIGKILL every descendant of this (browser) process.
+ * Spawn a helper (stdio ignored) that SIGKILLs any surviving electron
+ * descendants once this (browser) process has exited.
  *
  * Why: npm runs lifecycle scripts with piped stdio and only considers the
  * script finished when those pipes hit EOF. Our Chromium subtree (zygotes,
@@ -36,36 +37,52 @@ type UiEvent =
  * within a second of the browser, but on some CI runners it lingers
  * (the runner's D-Bus session is misconfigured — see the
  * "Failed to connect to the bus" lines in CI logs). One living descendant
- * keeps the pipes open and hangs the e2e step until timeout. Killing the
- * tree makes the self-test unwind deterministic.
+ * keeps the pipes open and hangs the e2e step until timeout.
  *
- * POSIX only (pgrep): a no-op where pgrep is unavailable, so the
+ * The helper must act only AFTER the browser is dead: SIGKILLing the
+ * GPU/zygote while the browser is still alive races with Chromium's
+ * "GPU process isn't usable. Goodbye." FATAL and crashes the process
+ * before app.exit() can run (observed in CI). Being stdio-ignored, the
+ * helper itself never holds the pipes and never delays npm.
+ *
+ * POSIX only (sh/pgrep): a no-op where they are unavailable, so the
  * app.exit() below still runs and behavior is unchanged.
  */
-function killDescendants(): void {
-  const toKill: number[] = [];
-  const queue: number[] = [process.pid];
-  while (queue.length > 0) {
-    const pid = queue.shift()!;
-    let out: string;
-    try {
-      out = execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" });
-    } catch {
-      continue; // no children, or pgrep unavailable
-    }
-    for (const line of out.split("\n")) {
-      const child = Number(line);
-      if (!Number.isInteger(child) || child <= 0) continue;
-      toKill.push(child);
-      queue.push(child);
-    }
-  }
-  for (const pid of toKill) {
-    try {
-      process.kill(pid, "SIGKILL");
-    } catch {
-      // already gone — fine
-    }
+function spawnCleanupHelper(): void {
+  const script = [
+    "BROWSER=$1; BIN=$2",
+    // BFS-collect the descendant tree while the browser is still alive.
+    'TREE=""; Q=$BROWSER',
+    'while [ -n "$Q" ]; do',
+    '  NEXT=""; for p in $Q; do',
+    '    C=$(pgrep -P "$p" 2>/dev/null)',
+    '    [ -n "$C" ] && NEXT="$NEXT $C"',
+    "  done",
+    '  TREE="$TREE $NEXT"; Q="$NEXT"',
+    "done",
+    // Wait for the browser to die (up to ~30s), so killing its children
+    // can never race the browser's own crash handling.
+    "i=0",
+    'while kill -0 "$BROWSER" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done',
+    // Kill any survivors from the collected tree (minus this helper).
+    "for p in $TREE; do",
+    '  [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null',
+    "done",
+    // Belt and braces: also match by binary path, catching any child the
+    // browser re-launched during shutdown (e.g. the network service).
+    'pkill -9 -f "$BIN" 2>/dev/null',
+    "exit 0",
+  ].join("\n");
+  try {
+    // Note: with `sh -c script A B`, A is $0 and B is $1 — the
+    // "cleanup-helper" argument is the $0 placeholder.
+    const helper = spawn("sh", ["-c", script, "cleanup-helper", String(process.pid), process.execPath], { stdio: "ignore" });
+    helper.unref();
+    helper.on("error", () => {
+      /* sh unavailable (e.g. Windows): app.exit() below still runs */
+    });
+  } catch {
+    /* spawn failed: app.exit() below still runs */
   }
 }
 
@@ -192,8 +209,8 @@ app.whenReady().then(async () => {
   startSuitesWatcher();
   if (process.env.HARNESS_SELF_TEST) {
     const code = await selfTest();
-    // Deterministic unwind: see killDescendants().
-    killDescendants();
+    // Deterministic unwind: see spawnCleanupHelper().
+    spawnCleanupHelper();
     app.exit(code);
   }
   app.on("activate", () => {
