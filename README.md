@@ -2,7 +2,7 @@
 
 ![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-<!-- CI badge: add `![CI](https://github.com/<you>/payments-test-harness/actions/workflows/verify.yml/badge.svg)` once the repo has a public remote. -->
+![CI](https://github.com/ed-guerr/payments-test-harness/actions/workflows/verify.yml/badge.svg)
 
 > **TL;DR**: A C payments backend (3 TCP processes, hand-rolled binary wire protocol,
 > no docs) plus an MCP server through which an LLM agent authors, validates, and runs
