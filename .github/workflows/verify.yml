@@ -118,10 +118,46 @@ jobs:
       # Step timeout: the self-test's did-finish-load / IPC awaits have no
       # internal watchdog; bound a hang at 10m so the run fails cleanly
       # instead of the 15m job timeout cancelling the whole run.
+      #
+      # Verdict file: on some runner images the D-Bus session bus is
+      # misconfigured (the ERROR:dbus lines above) and the app's shutdown
+      # can wedge *after* the suite has completed — the process then dies
+      # via the cleanup helper's SIGKILL with a non-zero exit even though
+      # the suite passed. The self-test writes its exit code to
+      # /tmp/harness-self-test-result the moment the suite completes,
+      # before any shutdown, so the suite verdict is the gate: a real
+      # failure still fails (no file, or file = 1).
       - name: xvfb-run npm run test:e2e
         working-directory: harness
         timeout-minutes: 10
-        run: xvfb-run -a npm run test:e2e -- --no-sandbox
+        env:
+          HARNESS_SELF_TEST_RESULT: /tmp/harness-self-test-result
+        run: |
+          set +e
+          rm -f /tmp/harness-self-test-result
+          xvfb-run -a npm run test:e2e -- --no-sandbox
+          rc=$?
+          set -e
+          if [ -f /tmp/harness-self-test-result ]; then
+            code=$(cat /tmp/harness-self-test-result)
+            echo "self-test verdict: $code (process exit: $rc)"
+            if [ "$code" = "0" ]; then
+              [ "$rc" -eq 0 ] || echo "note: process was killed during teardown on this runner; suite verdict is authoritative"
+              exit 0
+            fi
+            echo "self-test: suite FAILED (verdict file)"
+            exit 1
+          fi
+          if [ "$rc" -eq 0 ]; then exit 0; fi
+          echo "self-test: no verdict file — app died before the suite completed (exit $rc)"
+          exit "$rc"
+
+      # Timeline from the self-test's process-cleanup helper (see
+      # spawnCleanupHelper in harness/src/main/main.ts): when the browser
+      # exited relative to helper start, and what it had to kill.
+      - name: Dump self-test cleanup log
+        if: always()
+        run: cat /tmp/pth-cleanup-helper.log 2>/dev/null || echo "(no cleanup-helper log)"
 
   docker:
     name: docker image (build + headless run)

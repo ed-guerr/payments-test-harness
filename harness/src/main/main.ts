@@ -9,6 +9,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
 import { backendBuildDir, DATA_DIR, RUNS_DIR, SUITES_DIR } from "../backend/paths";
@@ -42,15 +43,26 @@ type UiEvent =
  * The helper must act only AFTER the browser is dead: SIGKILLing the
  * GPU/zygote while the browser is still alive races with Chromium's
  * "GPU process isn't usable. Goodbye." FATAL and crashes the process
- * before app.exit() can run (observed in CI). Being stdio-ignored, the
- * helper itself never holds the pipes and never delays npm.
+ * before exit can run (observed in CI). Being stdio-ignored, the helper
+ * itself never holds the pipes and never delays npm.
+ *
+ * On the rare runner where the browser's *own* shutdown wedges (process
+ * still alive ~10s after exit is requested — observed in CI on a
+ * misconfigured D-Bus runner image), the helper's final pkill kills the
+ * wedged browser too; the CI step then trusts the verdict file written
+ * by the self-test instead of the (SIGKILL-derived) exit code.
+ *
+ * The helper appends a timeline to /tmp/pth-cleanup-helper.log (when the
+ * browser died relative to helper start, what it had to kill) — the e2e
+ * step dumps it for diagnosis.
  *
  * POSIX only (sh/pgrep): a no-op where they are unavailable, so the
- * app.exit() below still runs and behavior is unchanged.
+ * process.exit() below still runs and behavior is unchanged.
  */
 function spawnCleanupHelper(): void {
   const script = [
-    "BROWSER=$1; BIN=$2",
+    "BROWSER=$1; BIN=$2; LOG=/tmp/pth-cleanup-helper.log",
+    'echo "helper: start=$(date +%s) browser=$BROWSER helper_pid=$$" >> "$LOG" 2>/dev/null',
     // BFS-collect the descendant tree while the browser is still alive.
     'TREE=""; Q=$BROWSER',
     'while [ -n "$Q" ]; do',
@@ -60,16 +72,22 @@ function spawnCleanupHelper(): void {
     "  done",
     '  TREE="$TREE $NEXT"; Q="$NEXT"',
     "done",
-    // Wait for the browser to die (up to ~30s), so killing its children
-    // can never race the browser's own crash handling.
+    'echo "helper: tree=[$TREE]" >> "$LOG" 2>/dev/null',
+    // Wait for the browser to die (up to ~10s — a healthy exit takes
+    // milliseconds), so killing its children can never race the
+    // browser's own crash handling.
     "i=0",
-    'while kill -0 "$BROWSER" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 0.2; i=$((i+1)); done',
+    'while kill -0 "$BROWSER" 2>/dev/null && [ "$i" -lt 50 ]; do sleep 0.2; i=$((i+1)); done',
+    'if kill -0 "$BROWSER" 2>/dev/null; then BS=STILL-ALIVE; else BS=gone; fi',
+    'echo "helper: browser=$BS after ${i} checks (t=$(date +%s))" >> "$LOG" 2>/dev/null',
     // Kill any survivors from the collected tree (minus this helper).
     "for p in $TREE; do",
     '  [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null',
     "done",
     // Belt and braces: also match by binary path, catching any child the
-    // browser re-launched during shutdown (e.g. the network service).
+    // browser re-launched during shutdown (e.g. the network service) —
+    // and, if the browser's shutdown wedged, the browser itself.
+    `echo "helper: pkill-matches=[$(pgrep -f "$BIN" 2>/dev/null | tr '\\n' ' ')]" >> "$LOG" 2>/dev/null`,
     'pkill -9 -f "$BIN" 2>/dev/null',
     "exit 0",
   ].join("\n");
@@ -79,10 +97,10 @@ function spawnCleanupHelper(): void {
     const helper = spawn("sh", ["-c", script, "cleanup-helper", String(process.pid), process.execPath], { stdio: "ignore" });
     helper.unref();
     helper.on("error", () => {
-      /* sh unavailable (e.g. Windows): app.exit() below still runs */
+      /* sh unavailable (e.g. Windows): process.exit() below still runs */
     });
   } catch {
-    /* spawn failed: app.exit() below still runs */
+    /* spawn failed: process.exit() below still runs */
   }
 }
 
@@ -209,9 +227,21 @@ app.whenReady().then(async () => {
   startSuitesWatcher();
   if (process.env.HARNESS_SELF_TEST) {
     const code = await selfTest();
+    // Record the verdict before any shutdown work: on some runner images
+    // the app's shutdown wedges (misconfigured D-Bus session bus — see
+    // the ERROR:dbus lines in CI), the process then dies via the cleanup
+    // helper's SIGKILL with a non-zero exit, and the CI step gates on
+    // this file instead of that exit code.
+    const verdictFile =
+      process.env.HARNESS_SELF_TEST_RESULT || path.join(os.tmpdir(), "harness-self-test-result");
+    fs.writeFileSync(verdictFile, String(code));
+    console.log(`self-test: suite done (code=${code}); exiting now (pid=${process.pid})`);
     // Deterministic unwind: see spawnCleanupHelper().
     spawnCleanupHelper();
-    app.exit(code);
+    // process.exit (not app.exit): the self-test needs no graceful app
+    // shutdown, and a hard exit skips Electron's shutdown path — the
+    // suspected wedge point on misconfigured runner images.
+    process.exit(code);
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

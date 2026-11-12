@@ -1,6 +1,6 @@
 # harness/src/main — Intern Guide
 
-> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-12T02:30:08.576Z · kb-forge 0.2 · source sha256:dcce2a3b3ed4
+> written by Qwen3.8-27B (local, via pi coding agent) · generated 2026-11-12T03:31:18.405Z · kb-forge 0.2 · source sha256:68d8a2ca3931
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on,
 
 | file | ~lines |
 |---|---|
-| main.ts | 224 |
+| main.ts | 254 |
 | preload.ts | 53 |
 
 ## Domain vocabulary
@@ -25,12 +25,12 @@ Electron main process. Creates the sandboxed BrowserWindow (contextIsolation on,
 
 | function | defined at |
 |---|---|
-| `spawnCleanupHelper` | main.ts:51 |
-| `createWindow` | main.ts:91 |
-| `sendUi(e: UiEvent)` | main.ts:107 |
-| `registerIpc` | main.ts:111 |
-| `selfTest` | main.ts:158 |
-| `startSuitesWatcher` | main.ts:192 |
+| `spawnCleanupHelper` | main.ts:62 |
+| `createWindow` | main.ts:109 |
+| `sendUi(e: UiEvent)` | main.ts:125 |
+| `registerIpc` | main.ts:129 |
+| `selfTest` | main.ts:176 |
+| `startSuitesWatcher` | main.ts:210 |
 
 ## Common modification points
 
