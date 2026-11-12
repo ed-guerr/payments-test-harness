@@ -7,6 +7,7 @@
  * (contextIsolation, no nodeIntegration) — everything goes through preload.
  */
 import { app, BrowserWindow, ipcMain } from "electron";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { BackendCluster } from "../backend/cluster";
@@ -24,6 +25,49 @@ type UiEvent =
   | RunnerEvent
   | { type: "backend-log"; proc: string; line: string }
   | { type: "suites-changed"; suites: SuiteMeta[] };
+
+/**
+ * SIGKILL every descendant of this (browser) process.
+ *
+ * Why: npm runs lifecycle scripts with piped stdio and only considers the
+ * script finished when those pipes hit EOF. Our Chromium subtree (zygotes,
+ * renderer, GPU, network utility) all inherit the pipe write ends — the
+ * whole chain is stdio-inherit. In most environments the subtree exits
+ * within a second of the browser, but on some CI runners it lingers
+ * (the runner's D-Bus session is misconfigured — see the
+ * "Failed to connect to the bus" lines in CI logs). One living descendant
+ * keeps the pipes open and hangs the e2e step until timeout. Killing the
+ * tree makes the self-test unwind deterministic.
+ *
+ * POSIX only (pgrep): a no-op where pgrep is unavailable, so the
+ * app.exit() below still runs and behavior is unchanged.
+ */
+function killDescendants(): void {
+  const toKill: number[] = [];
+  const queue: number[] = [process.pid];
+  while (queue.length > 0) {
+    const pid = queue.shift()!;
+    let out: string;
+    try {
+      out = execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" });
+    } catch {
+      continue; // no children, or pgrep unavailable
+    }
+    for (const line of out.split("\n")) {
+      const child = Number(line);
+      if (!Number.isInteger(child) || child <= 0) continue;
+      toKill.push(child);
+      queue.push(child);
+    }
+  }
+  for (const pid of toKill) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // already gone — fine
+    }
+  }
+}
 
 let win: BrowserWindow | null = null;
 
@@ -148,6 +192,8 @@ app.whenReady().then(async () => {
   startSuitesWatcher();
   if (process.env.HARNESS_SELF_TEST) {
     const code = await selfTest();
+    // Deterministic unwind: see killDescendants().
+    killDescendants();
     app.exit(code);
   }
   app.on("activate", () => {
